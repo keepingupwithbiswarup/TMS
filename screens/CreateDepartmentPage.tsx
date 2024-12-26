@@ -2,19 +2,19 @@ import { Image, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableO
 import React, { useState } from 'react'
 import DropDownPicker from 'react-native-dropdown-picker';
 
-const CreateOrganizationPage = ({ navigation }: { navigation: any }) => {
-    const [organizationName, setOrganizationName] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [industry, setIndustry] = useState(null);
-    const [open, setOpen] = useState(false); 
-    const [organizationSize, setOrganizationSize] = useState('');
+const CreateDepartmentPage = ({ navigation }: { navigation: any }) => {
+    const [deptName, setDeptName] = useState('');
+
+    const [deptType, setDeptType] = useState(null);
+    const [open, setOpen] = useState(false);
+    const [deptSize, setDeptSize] = useState('');
 
     const isFormValid = () => {
-        return organizationName !== '' && phoneNumber!=='' && industry!==null && organizationSize!=='';
+        return deptName !== '' && deptType !== null && deptSize !== '';
     };
 
-    const handleOrganizationSizeSelect = (size: string) => {  
-        setOrganizationSize(size); 
+    const handleOrganizationSizeSelect = (size: string) => {
+        setDeptSize(size);
     };
 
     return (
@@ -24,7 +24,13 @@ const CreateOrganizationPage = ({ navigation }: { navigation: any }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} >
                     <Image tintColor={"black"} style={styles.image} source={require('../assets/back-arrow.png')} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={()=>{navigation.navigate('ChooseGoalPage')}}
+                <TouchableOpacity onPress={() => {
+                    navigation.navigate('ChooseGoalPage', {
+                        deptName,
+                        deptSize,
+                        deptType,
+                    });
+                }}
                     style={[styles.nextButton, { backgroundColor: isFormValid() ? '#602bf9' : '#d3d3d3' }]}
                     disabled={!isFormValid()}
                 >
@@ -34,46 +40,36 @@ const CreateOrganizationPage = ({ navigation }: { navigation: any }) => {
 
             <View style={{ height: 20 }} />
             <View>
-                <Text style={styles.headerText}>Let's start your organization on the right track</Text>
+                <Text style={styles.headerText}>Let's start your department on the right track</Text>
                 <Text style={styles.subText}>Help us create the best experience for you.</Text>
             </View>
             <View style={{ height: 15 }} />
             <View style={{ marginHorizontal: 7 }}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Your organization name"
-                    value={organizationName}
-                    onChangeText={setOrganizationName}
+                    placeholder="Your Department name"
+                    value={deptName}
+                    onChangeText={setDeptName}
                 />
             </View>
 
-            <View style={styles.phoneInputContainer}>
-                <Text style={styles.countryCode}>+91</Text>
-                <TextInput
-                    style={styles.phoneInput}
-                    placeholder="Phone Number"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                />
-            </View>
+
 
 
             <View style={{ marginHorizontal: 7, marginTop: 15 }}>
                 <View>
                     <DropDownPicker
                         open={open}
-                        value={industry}
+                        value={deptType}
                         items={[
-                            { label: 'Technology', value: 'Technology' },
-                            { label: 'Healthcare', value: 'Healthcare' },
+                            { label: 'IT', value: 'IT' },
                             { label: 'Finance', value: 'Finance' },
-                            { label: 'Education', value: 'Education' },
-                            { label: 'Retail', value: 'Retail' },
+                            { label: 'Marketing', value: 'Marketing' },
+                            { label: 'HR', value: 'HR' },
+                            { label: 'Accounting', value: 'Accounting' },
                         ]}
                         setOpen={setOpen}
-                        setValue={setIndustry}
+                        setValue={setDeptType}
                         placeholder="Select Industry"
                         style={styles.input}
                         arrowIconStyle={styles.arrowIconStyle}
@@ -85,38 +81,38 @@ const CreateOrganizationPage = ({ navigation }: { navigation: any }) => {
                 </View>
 
                 <View style={styles.organizationSizeContainer}>
-                <Text style={styles.label}>Organization size</Text>
-                <View style={styles.sizeButtonsContainer}>
-                    {['1-10', '11-20', '21-50', '51-100', '100+'].map((size) => (
-                        <TouchableOpacity
-                            key={size}
-                            style={[
-                                styles.sizeButton,
-                                organizationSize === size && styles.selectedSizeButton,
-                            ]}
-                            onPress={() => handleOrganizationSizeSelect(size)}
-                        >
-                            <Text
+                    <Text style={styles.label}>Department Size</Text>
+                    <View style={styles.sizeButtonsContainer}>
+                        {['1-10', '11-20', '21-50', '51-100', '100+'].map((size) => (
+                            <TouchableOpacity
+                                key={size}
                                 style={[
-                                    styles.sizeButtonText,
-                                    organizationSize === size && styles.selectedSizeButtonText,
+                                    styles.sizeButton,
+                                    deptSize === size && styles.selectedSizeButton,
                                 ]}
+                                onPress={() => handleOrganizationSizeSelect(size)}
                             >
-                                {size}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                                <Text
+                                    style={[
+                                        styles.sizeButtonText,
+                                        deptSize === size && styles.selectedSizeButtonText,
+                                    ]}
+                                >
+                                    {size}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+
                 </View>
-
-
-            </View>
             </View>
 
         </SafeAreaView>
     )
 }
 
-export default CreateOrganizationPage
+export default CreateDepartmentPage
 
 const styles = StyleSheet.create({
     container: {
@@ -221,13 +217,13 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: 'bold',
         marginBottom: 12,
-        paddingLeft:3,
-        color:"grey",
+        paddingLeft: 3,
+        color: "grey",
     },
     sizeButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        paddingVertical:5,
+        paddingVertical: 5,
     },
     sizeButton: {
         paddingVertical: 20,
@@ -238,7 +234,7 @@ const styles = StyleSheet.create({
     },
     selectedSizeButton: {
         backgroundColor: '#E5D9F2',
-        borderColor:"#602bf9"
+        borderColor: "#602bf9"
     },
     sizeButtonText: {
         fontSize: 14,

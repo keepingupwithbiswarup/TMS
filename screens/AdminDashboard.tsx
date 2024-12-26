@@ -1,16 +1,52 @@
-import { Dimensions, Image, StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import React from 'react'
+import { Dimensions, Image, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { ScrollView } from 'react-native-gesture-handler'
 import { LineChart, PieChart } from 'react-native-chart-kit'
+import { AuthContext } from '../utilities/AuthProvider'
+import { User } from '../utilities/types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useFocusEffect } from '@react-navigation/native'
 
 const AdminDashboard = ({ navigation }: { navigation: any }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const checkUser = async () => {
+    const currentUser = await AsyncStorage.getItem('currentUser');
+    if (currentUser) {
+
+      setCurrentUser(JSON.parse(currentUser));
+      setLoading(false);
+    } else {
+      setLoading(false);
+    }
+  };
+
+  
+  useFocusEffect(
+    useCallback(() => {
+      checkUser(); 
+    }, [])
+  );
+
+  if (loading) {
+       
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0000ff" />
+            </View>
+        </SafeAreaView>
+    );
+}
 
     const whoIsInOutData = {
         in: 0,
         break: 0,
         out: 1,
     };
+     
 
     const trackedHoursData = {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -66,6 +102,8 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
         { date: '14 Feb 2025', name: "Valentine's Day" },
     ];
 
+  
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={{ flex: 1 }}>
@@ -73,7 +111,7 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
                     <Text style={styles.headerText}>Dashboard</Text>
                     <TouchableOpacity onPress={()=>{navigation.navigate('PersonalSettings')}}>
                     <View style={styles.circle}>
-                        <Text style={styles.circleText}>B</Text>
+                        <Text style={styles.circleText}>{currentUser?.Username[0]}</Text>
                     </View>
                     </TouchableOpacity>
                 </View>
@@ -218,6 +256,12 @@ const styles = StyleSheet.create({
         alignSelf: "center",
         fontWeight: "bold",
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
     circle: {
         width: 40,
         height: 40,

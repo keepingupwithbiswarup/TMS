@@ -1,20 +1,20 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { createRef, useContext, useEffect, useState } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';  
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import LandingPage from './screens/LandingPage';
 import SignUpPage from './screens/SignUpPage';
 import LoginPage from './screens/LoginPage';
 import ForgotPasswordPage from './screens/ForgotPasswordPage';
 import HomePageV1 from './screens/HomePageV1';
-import CreateOrganizationPage from './screens/CreateOrganizationPage';
+import CreateOrganizationPage from './screens/CreateDepartmentPage';
 import ChooseGoalPage from './screens/ChooseGoalPage';
 import AdminDashboard from './screens/AdminDashboard';
 import TimeClock from './screens/TimeClock';
 import Timesheets from './screens/Timesheets';
 import Approvals from './screens/Approvals';
 import Menu from './screens/Menu';
-import { Image } from 'react-native';
+import { ActivityIndicator, Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import PersonalSettings from './screens/PersonalSettings';
 import AccountControl from './screens/AccountControl';
@@ -26,18 +26,33 @@ import PhoneNumber from './screens/PhoneNumber';
 import ChangePassword from './screens/ChangePassword';
 import WorkScheduleSettings from './screens/WorkScheduleSettings';
 import CreateWorkSchedule from './screens/CreateWorkSchedule';
+import AuthProvider, { AuthContext } from './utilities/AuthProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Address from './screens/Address';
+import People from './screens/People';
+import UserProfile from './screens/UserProfile';
+import UserPhone from './screens/UserPhone';
+import UserAddress from './screens/UserAddress';
+import UserRole from './screens/UserRole';
+import CreateDepartmentPage from './screens/CreateDepartmentPage';
+import Departments from './screens/Departments';
+import DepartmentDetails from './screens/DepartmentDetails';
 
+
+
+
+const navigationRef = createRef<NavigationContainerRef<any>>();
 
 const Tab = createBottomTabNavigator();
+
 const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }:{route:any}) => ({
+      screenOptions={({ route }: { route: any }) => ({
         headerShown: false,
         tabBarIcon: ({ focused, color }) => {
           let icon;
 
-  
           if (route.name === 'Dashboard') {
             icon = require('./assets/house-icon.png');
           } else if (route.name === 'Time Clock') {
@@ -53,17 +68,17 @@ const BottomTabNavigator = () => {
           return (
             <Image
               source={icon}
-              style={{ width: 30, height: 30, tintColor: color }} 
+              style={{ width: 30, height: 30, tintColor: color }}
             />
           );
         },
-        tabBarActiveTintColor: '#602bf9', 
-        tabBarInactiveTintColor: '#aaa', 
-        tabBarStyle: { backgroundColor: '#fff',height:65,paddingTop:5,elevation:0}, 
+        tabBarActiveTintColor: '#602bf9',
+        tabBarInactiveTintColor: '#aaa',
+        tabBarStyle: { backgroundColor: '#fff', height: 65, paddingTop: 5, elevation: 0 },
         tabBarLabelStyle: {
-          fontSize: 12, 
+          fontSize: 12,
           fontWeight: '500',
-          marginTop:3,
+          marginTop: 3,
         },
       })}
     >
@@ -76,38 +91,119 @@ const BottomTabNavigator = () => {
   );
 };
 
-
 const Stack = createStackNavigator();
+
+const AppNavigator = () => {
+  const { currentUser } = useContext(AuthContext) || {};
+  const [loading, setLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('LandingPage'); 
+  const fadeAnim = new Animated.Value(0);
+
+  useEffect(() => {
+    const checkUserAndAnimate = async () => {
+
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+
+      setTimeout(async () => {
+        const storedUser = await AsyncStorage.getItem('currentUser');
+        if (storedUser) {
+          setInitialRoute('BottomTabs');
+        }
+        setLoading(false);
+      }, 2000);
+    };
+
+    checkUserAndAnimate();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.splashContainer}>
+        <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
+          <Image style={{
+            height: 60,
+            width: 60,
+            tintColor: "white",
+            marginBottom: 10,
+          }} source={require('./assets/work-schedule.png')}></Image>
+          <Text style={{
+            fontSize: 22,
+            color: 'white',
+            fontWeight: "bold",
+          }}>TMS</Text>
+        </Animated.View>
+      </View>
+    );
+  }
+
+
+  return (
+    <Stack.Navigator initialRouteName={initialRoute}>
+      <Stack.Screen name="LandingPage" component={LandingPage} options={{ headerShown: false }} />
+      <Stack.Screen name="SignUpPage" component={SignUpPage} options={{ headerShown: false }} />
+      <Stack.Screen name="LoginPage" component={LoginPage} options={{ headerShown: false }} />
+      <Stack.Screen name="ForgotPasswordPage" component={ForgotPasswordPage} options={{ headerShown: false }} />
+      <Stack.Screen name="HomePageV1" component={HomePageV1} options={{ headerShown: false }} />
+      <Stack.Screen name="CreateDepartmentPage" component={CreateDepartmentPage} options={{ headerShown: false }} />
+      <Stack.Screen name="ChooseGoalPage" component={ChooseGoalPage} options={{ headerShown: false }} />
+      <Stack.Screen name="BottomTabs" component={BottomTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="PersonalSettings" component={PersonalSettings} options={{ headerShown: false }} />
+      <Stack.Screen name="AccountControl" component={AccountControl} options={{ headerShown: false }} />
+      <Stack.Screen name="ProfilePage" component={ProfilePage} options={{ headerShown: false }} />
+      <Stack.Screen name="Fullname" component={Fullname} options={{ headerShown: false }} />
+      <Stack.Screen name="PreferredName" component={PreferredName} options={{ headerShown: false }} />
+      <Stack.Screen name="Email" component={Email} options={{ headerShown: false }} />
+      <Stack.Screen name="Address" component={Address} options={{ headerShown: false }} />
+      <Stack.Screen name="PhoneNumber" component={PhoneNumber} options={{ headerShown: false }} />
+      <Stack.Screen name="ChangePassword" component={ChangePassword} options={{ headerShown: false }} />
+      <Stack.Screen name="WorkScheduleSettings" component={WorkScheduleSettings} options={{ headerShown: false }} />
+      <Stack.Screen name="CreateWorkSchedule" component={CreateWorkSchedule} options={{ headerShown: false }} />
+      <Stack.Screen name="People" component={People} options={{ headerShown: false }} />
+      <Stack.Screen name="UserProfile" component={UserProfile} options={{ headerShown: false }} />
+      <Stack.Screen name="UserPhone" component={UserPhone} options={{ headerShown: false }} />
+      <Stack.Screen name="UserAddress" component={UserAddress} options={{ headerShown: false }} />
+      <Stack.Screen name="UserRole" component={UserRole} options={{ headerShown: false }} />
+      <Stack.Screen name="Departments" component={Departments} options={{ headerShown: false }} />
+      <Stack.Screen name="DepartmentDetails" component={DepartmentDetails} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+};
 
 const App = () => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="LandingPage">
-          <Stack.Screen name="LandingPage" component={LandingPage} options={{ headerShown: false }} />
-          <Stack.Screen name="SignUpPage" component={SignUpPage} options={{ headerShown: false }} />
-          <Stack.Screen name="LoginPage" component={LoginPage} options={{ headerShown: false }} />
-          <Stack.Screen name="ForgotPasswordPage" component={ForgotPasswordPage} options={{ headerShown: false }} />
-          <Stack.Screen name="HomePageV1" component={HomePageV1} options={{ headerShown: false }} />
-          <Stack.Screen name="CreateOrganizationPage" component={CreateOrganizationPage} options={{ headerShown: false }} />
-          <Stack.Screen name="ChooseGoalPage" component={ChooseGoalPage} options={{ headerShown: false }} />
-
-
-          <Stack.Screen name="BottomTabs" component={BottomTabNavigator} options={{ headerShown: false }} />
-          <Stack.Screen name="PersonalSettings" component={PersonalSettings} options={{ headerShown: false }} />
-          <Stack.Screen name="AccountControl" component={AccountControl} options={{ headerShown: false }} />
-          <Stack.Screen name="ProfilePage" component={ProfilePage} options={{ headerShown: false }} />
-          <Stack.Screen name="Fullname" component={Fullname} options={{ headerShown: false }} />
-          <Stack.Screen name="PreferredName" component={PreferredName} options={{ headerShown: false }} />
-          <Stack.Screen name="Email" component={Email} options={{ headerShown: false }} />
-          <Stack.Screen name="PhoneNumber" component={PhoneNumber} options={{ headerShown: false }} />
-          <Stack.Screen name="ChangePassword" component={ChangePassword} options={{ headerShown: false }} />
-          <Stack.Screen name="WorkScheduleSettings" component={WorkScheduleSettings} options={{ headerShown: false }} />
-          <Stack.Screen name="CreateWorkSchedule" component={CreateWorkSchedule} options={{ headerShown: false }} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AuthProvider>
+        <NavigationContainer ref={navigationRef}>
+          <AppNavigator />
+        </NavigationContainer>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 };
+const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#602bf9',
+  },
+  image: {
+    height: 60,
+    width: 60,
+    tintColor: "white",
+    marginBottom: 10,
+  },
+  splashText: {
+    fontSize: 22,
+    color: 'white',
+    fontWeight: "bold",
+  },
+});
+
 
 export default App;

@@ -3,7 +3,9 @@ import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CheckBox from 'react-native-check-box';
 
-const ChooseGoalPage = ({ navigation }: { navigation: any }) => {
+const ChooseGoalPage = ({ navigation,route }: { navigation: any,route:any }) => {
+    const { deptName, deptSize, deptType } = route.params;
+    console.log(deptName, deptSize, deptType);
     const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
 
     const handleGoalSelect = (goal: string) => {
@@ -15,6 +17,34 @@ const ChooseGoalPage = ({ navigation }: { navigation: any }) => {
     };
 
     const isFormValid = () => selectedGoals.length > 0;
+
+    const handleContinue = async () => {
+        const data = {
+            deptName,
+            deptSize,
+            deptType,
+        };
+
+        try {
+            const response = await fetch('http://192.168.10.137:5000/api/createdepartment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Data sent successfully:', result);
+                navigation.replace('Departments');
+            } else {
+                console.error('Failed to send data:', await response.text());
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -66,7 +96,7 @@ const ChooseGoalPage = ({ navigation }: { navigation: any }) => {
             <TouchableOpacity
                 style={[styles.nextButton, { backgroundColor: isFormValid() ? '#602bf9' : '#d3d3d3' }]}
                 disabled={!isFormValid()}
-                onPress={() => { navigation.replace('BottomTabs') }}
+                onPress={handleContinue}
             >
                 <Text style={styles.btnText}>Continue</Text>
             </TouchableOpacity>

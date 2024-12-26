@@ -2,34 +2,38 @@ import { StatusBar, StyleSheet, Text, View, ScrollView, TextInput, ActivityIndic
 import React, { useCallback, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../components/Header'
-
 import BottomButton from '../components/BottomButton'
 import { useFocusEffect } from '@react-navigation/native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { User } from '../utilities/types'
 
-const PhoneNumber = ({ navigation }: { navigation: any }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+const UserPhone = ({ route, navigation }: { route: any; navigation: any }) => {
+  const { employeeId } = route.params; 
   const [loading, setLoading] = useState(true);
   const [phone, setPhone] = useState<string>('');
   const [initialPhone, setInitialPhone] = useState<string>('');
-  const [isEditable, setIsEditable] = useState<boolean>(true); 
+  const [isEditable, setIsEditable] = useState<boolean>(true);
 
   const checkUser = async () => {
     setLoading(true);
     try {
-      const currentUser = await AsyncStorage.getItem('currentUser');
-      if (currentUser) {
-        const parsedUser = JSON.parse(currentUser);
-        setCurrentUser(parsedUser);
-        setPhone(parsedUser.PhoneNumber || '');
-        setInitialPhone(parsedUser.PhoneNumber || '');
-        if (parsedUser.Role !== 'Admin') {
-          setIsEditable(false);
+  
+      const response = await fetch(`http://192.168.10.137:5000/api/employees`);
+      if (response.ok) {
+        const users = await response.json();
+        const currentUser = users.find((user: any) => user.EmployeeId === employeeId);
+
+        if (currentUser) {
+          setPhone(currentUser.PhoneNumber || '');
+          setInitialPhone(currentUser.PhoneNumber || '');
+          
+        } else {
+          Alert.alert('User not found');
         }
+      } else {
+        Alert.alert('Failed to fetch users');
       }
     } catch (error) {
-      console.error("Error fetching user: ", error);
+      console.error('Error fetching user:', error);
+      Alert.alert('An error occurred while fetching the user');
     }
     setLoading(false);
   };
@@ -43,24 +47,19 @@ const PhoneNumber = ({ navigation }: { navigation: any }) => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       </SafeAreaView>
     );
   }
 
-  const isButtonActive = phone !== initialPhone && phone.length===10
-
+  const isButtonActive = phone !== initialPhone && phone.length === 10;
 
   const updatePhoneNumber = async () => {
-    if (currentUser && phone !== initialPhone && phone.length === 10) {
+    if (phone !== initialPhone && phone.length === 10) {
       try {
-        const response = await fetch(`http://192.168.10.137:5000/api/updatephone/${currentUser.EmployeeId}`, {
+        const response = await fetch(`http://192.168.10.137:5000/api/updatephone/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -71,9 +70,7 @@ const PhoneNumber = ({ navigation }: { navigation: any }) => {
         });
 
         if (response.ok) {
-          const updatedUser = { ...currentUser, PhoneNumber: phone };
-          setCurrentUser(updatedUser);
-          await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));  
+          Alert.alert('Phone number updated successfully');
           navigation.goBack();
         } else {
           Alert.alert('Failed to update phone number');
@@ -94,32 +91,31 @@ const PhoneNumber = ({ navigation }: { navigation: any }) => {
 
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
         <View style={styles.formContainer}>
-         <View style={styles.phoneInputContainer}>
-                         <Text style={styles.countryCode}>+91</Text>
-                         <TextInput
-                             style={styles.phoneInput}
-                             placeholder="Phone Number"
-                             keyboardType="phone-pad"
-                             maxLength={10}
-                             value={phone}
-                             onChangeText={setPhone}
-                             editable={true}
-                         />
-                     </View>
+          <View style={styles.phoneInputContainer}>
+            <Text style={styles.countryCode}>+91</Text>
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="Phone Number"
+              keyboardType="phone-pad"
+              maxLength={10}
+              value={phone}
+              onChangeText={setPhone}
+              editable={isEditable}
+            />
+          </View>
         </View>
       </ScrollView>
 
-
       <BottomButton
         title="Save"
-        onPress={updatePhoneNumber}  
-        isActive={isButtonActive} 
+        onPress={updatePhoneNumber}
+        isActive={isButtonActive}
       />
     </SafeAreaView>
-  )
-}
+  );
+};
 
-export default PhoneNumber
+export default UserPhone;
 
 const styles = StyleSheet.create({
   container: {
@@ -138,21 +134,21 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "white",
     paddingLeft: 10,
-},
-countryCode: {
+  },
+  countryCode: {
     fontSize: 16,
     fontWeight: "bold",
     color: "black",
     marginRight: 8,
     marginLeft: 2,
-    marginBottom:1,
-},
-phoneInput: {
+    marginBottom: 1,
+  },
+  phoneInput: {
     flex: 1,
     height: 50,
     fontSize: 15,
     color: "#000",
     fontWeight: "bold",
     paddingLeft: 5,
-},
-})
+  },
+});

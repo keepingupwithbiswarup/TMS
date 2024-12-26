@@ -1,13 +1,32 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView, StatusBar } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView, StatusBar, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from 'react-native-gesture-handler';
-import CheckBox from 'react-native-check-box'; 
+import CheckBox from 'react-native-check-box';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function SignUpPage({navigation}:{navigation:any}) {
+const API_BASE_URL = 'http://192.168.10.113:2002';
+
+export async function registerUser(userName: string, email: string, password: string): Promise<any> {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/account/register`, {
+      "UserName": userName,
+      "Email": email,
+      "Password": password,
+      "Role": "Employee"
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error during registration:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+export default function SignUpPage({ navigation }: { navigation: any }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [fullName, setFullName] = useState('');
+  const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -17,33 +36,73 @@ export default function SignUpPage({navigation}:{navigation:any}) {
 
 
   const isFormValid = () => {
-    return fullName !== '' && email !== '' && password !== '' && isChecked;
+
+    const isUserNameValid = userName.trim().length >= 3;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = emailRegex.test(email);
+
+
+    const isPasswordValid = password.length >= 8;
+
+
+    return isUserNameValid && isEmailValid && isPasswordValid && isChecked;
   };
+
 
   useEffect(() => {
     console.log("Form Validity Changed:", isFormValid());
-  }, [fullName, email, password, isChecked]);
+  }, [userName, email, password, isChecked]);
+
+  const handleSignUp = async () => {
+    try {
+
+      const result = await registerUser(userName, email, password);
+      console.log('Registration Successful:', result);
+
+
+      const employeeResponse = await axios.get(`http://192.168.10.137:5000/api/employees`, {
+        params: { Username: userName },
+      });
+
+      const employee = employeeResponse.data.find((emp: any) => emp.Username === userName);
+
+      if (employee) {
+        console.log('Employee details found:', employee);
+        await AsyncStorage.setItem('currentUser', JSON.stringify(employee));
+        navigation.replace('BottomTabs');
+      } else {
+        console.warn('No employee details found for the registered user.');
+      }
+    } catch (error) {
+      console.error('Registration Failed:', error);
+      Alert.alert('An error occurred during registration. Please try again.');
+    }
+  };
+
+
+
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={"white"} barStyle={'dark-content'} ></StatusBar>
       <ScrollView contentContainerStyle={styles.scrollViewContainer}>
-      <TouchableOpacity onPress={() => navigation.goBack()} >
+        <TouchableOpacity onPress={() => navigation.goBack()} >
           <Image tintColor={"black"} style={styles.image} source={require('../assets/back-arrow.png')} />
         </TouchableOpacity>
-        
-        <View style={{ height: 40 }} />
-        
-        <Text style={styles.headerText}>Create a new account</Text>
-        
+
         <View style={{ height: 40 }} />
 
-    
+        <Text style={styles.headerText}>Create a new account</Text>
+
+        <View style={{ height: 40 }} />
+
+
         <TextInput
           style={styles.input}
           placeholder="Full Name"
-          value={fullName}
-          onChangeText={setFullName} 
+          value={userName}
+          onChangeText={setUserName}
         />
 
 
@@ -51,7 +110,7 @@ export default function SignUpPage({navigation}:{navigation:any}) {
           style={styles.input}
           placeholder="Email"
           value={email}
-          onChangeText={setEmail} 
+          onChangeText={setEmail}
         />
 
 
@@ -60,7 +119,7 @@ export default function SignUpPage({navigation}:{navigation:any}) {
             style={styles.input}
             placeholder="Password"
             value={password}
-            onChangeText={setPassword} 
+            onChangeText={setPassword}
             secureTextEntry={!passwordVisible}
           />
           <TouchableOpacity style={styles.eyeIcon} onPress={togglePasswordVisibility}>
@@ -75,7 +134,7 @@ export default function SignUpPage({navigation}:{navigation:any}) {
         <View style={styles.checkboxContainer}>
           <CheckBox
             isChecked={isChecked}
-            onClick={() => setIsChecked(!isChecked)} 
+            onClick={() => setIsChecked(!isChecked)}
             style={styles.checkbox}
           />
           <Text style={styles.checkboxText}>
@@ -84,10 +143,10 @@ export default function SignUpPage({navigation}:{navigation:any}) {
           </Text>
         </View>
 
-     
+
         <TouchableOpacity
           style={[styles.nextButton, { backgroundColor: isFormValid() ? '#602bf9' : '#d3d3d3' }]}
-          disabled={!isFormValid()} onPress={()=>{navigation.replace('HomePageV1')}}
+          disabled={!isFormValid()} onPress={handleSignUp}
         >
           <Text style={styles.btnText}>Next</Text>
         </TouchableOpacity>

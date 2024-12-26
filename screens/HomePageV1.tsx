@@ -1,7 +1,15 @@
 import { Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React from 'react'
+import React, { useContext } from 'react'
+import { AuthContext } from '../utilities/AuthProvider';
 
 const HomePageV1 = ({ navigation }: { navigation: any }) => {
+    const auth = useContext(AuthContext);
+
+    if (!auth) {
+        throw new Error("AuthContext is undefined. Ensure AuthProvider is set up properly.");
+    }
+
+    const { currentUser } = auth;
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor={"white"} barStyle={'dark-content'}></StatusBar>
@@ -15,11 +23,11 @@ const HomePageV1 = ({ navigation }: { navigation: any }) => {
             </View>
 
             <View style={styles.bodyContainer}>
-                <Text style={styles.headerText}>Hi Biswarup Dutta,</Text>
+                <Text style={styles.headerText}>Hi {currentUser?.Username} ,</Text>
                 <Text style={styles.subHeader}>Create or join an organization to put in your best hours at work.</Text>
 
             </View>
-            <View style={{height:100}}/>
+            <View style={{ height: 100 }} />
             <View style={styles.imageContainer}>
                 <Image
                     tintColor={"#979798"}
@@ -30,11 +38,11 @@ const HomePageV1 = ({ navigation }: { navigation: any }) => {
                 <Text style={styles.bodySubText}>Ask your manager to send you an invite or create your own organization in IECS's TMS.</Text>
             </View>
 
-            <View style={[ {backgroundColor: "white", width: "100%", paddingBottom: 20, paddingTop: 10},{position:'absolute',bottom:0} ]}>
-                                <Text style={{ fontSize: 14, color: "#686D76", textAlign: "center", fontWeight:"bold" }}>Want to manage your team's time tracking?</Text>
-                                <View style={{ height: 5, }} />
-                                <Text onPress={() => { navigation.navigate('CreateOrganizationPage') }} style={{ fontSize: 15, color: "#602bf9", fontWeight: "bold", textAlign: "center" }}>Create a new organization</Text>
-                            </View>
+            <View style={[{ backgroundColor: "white", width: "100%", paddingBottom: 20, paddingTop: 10 }, { position: 'absolute', bottom: 0 }]}>
+                <Text style={{ fontSize: 14, color: "#686D76", textAlign: "center", fontWeight: "bold" }}>Want to manage your team's time tracking?</Text>
+                <View style={{ height: 5, }} />
+                <Text onPress={() => { navigation.navigate('CreateOrganizationPage') }} style={{ fontSize: 15, color: "#602bf9", fontWeight: "bold", textAlign: "center" }}>Create a new organization</Text>
+            </View>
 
 
 
@@ -84,16 +92,16 @@ const styles = StyleSheet.create({
         height: 200,
         width: 200,
     },
-    bodyHeader:{
-        fontSize:16,
-        fontWeight:"bold",
-        color:"#979798"
+    bodyHeader: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#979798"
     },
-    bodySubText:{
-        fontSize:14,
-        margin:5,
-        color:"#979798",
-        textAlign:"center",
+    bodySubText: {
+        fontSize: 14,
+        margin: 5,
+        color: "#979798",
+        textAlign: "center",
     }
 
 })

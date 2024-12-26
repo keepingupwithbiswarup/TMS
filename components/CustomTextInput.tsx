@@ -1,33 +1,36 @@
-import React, { useState } from 'react'
-import { StyleSheet, TextInput, View } from 'react-native'
+import React, { useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 const CustomTextInput = ({
   placeholder,
   value,
   onChangeText,
+  editable = true,
 }: {
-  placeholder: string
-  value: string
-  onChangeText: (text: string) => void
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  editable?: boolean; 
 }) => {
-  const [isFocused, setIsFocused] = useState(false) 
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.inputContainer}>
       <TextInput
-        style={[styles.input, { borderColor: isFocused ? '#602bf9' : '#000' }]} 
+        style={[styles.input, { borderColor: isFocused ? '#602bf9' : '#000' }]}
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
         placeholderTextColor="#AAA"
-        onFocus={() => setIsFocused(true)} 
+        onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        editable={editable} // Use the editable prop here
       />
     </View>
-  )
-}
+  );
+};
 
-export default CustomTextInput
+export default CustomTextInput;
 
 const styles = StyleSheet.create({
   inputContainer: {
@@ -40,4 +43,4 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
     backgroundColor: 'white',
   },
-})
+});

@@ -1,9 +1,26 @@
 import { Image, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ButtonCustom from '../components/Button';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const LandingPage = ({navigation}:{navigation:any}) => {
   const [activeDot, setActiveDot] = useState(0);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkUser = async () => {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+
+          navigation.replace('BottomTabs');
+        }
+      };
+      
+      checkUser();
+    }, [navigation])
+  );
+
 
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {

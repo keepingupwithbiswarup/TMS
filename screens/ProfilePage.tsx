@@ -1,48 +1,89 @@
-import { Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React from 'react'
+import { ActivityIndicator, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useCallback, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../components/Header'
 import ProfileOptionCard from '../components/ProfileOptionCard'
+import { useFocusEffect } from '@react-navigation/native'
+
+import { User } from '../utilities/types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 
 const ProfilePage = ({navigation}:{navigation:any}) => {
+    
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    const checkUser = async () => {
+      setLoading(true);
+      try {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+          setCurrentUser(JSON.parse(currentUser));
+        }
+      } catch (error) {
+        console.error("Error fetching user: ", error);
+      }
+      setLoading(false);
+    };
+
+   
+    useFocusEffect(
+      useCallback(() => {
+        checkUser();
+      }, []) 
+    );
+      
+  
+    if (loading) {
+         
+      return (
+          <SafeAreaView style={styles.container}>
+              <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#0000ff" />
+              </View>
+          </SafeAreaView>
+      );
+  }
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar backgroundColor={"white"} barStyle={'dark-content'} />
-            <Header headingText="Biswarup Dutta" />
+            <Header headingText={currentUser?.Username as string} />
             <ScrollView>
 
                 <View style={styles.card}>
                     <TouchableOpacity>
                         <View style={styles.circle}>
-                            <Text style={styles.circleText}>B</Text>
+                            <Text style={styles.circleText}>{currentUser?.Username[0]}</Text>
                         </View>
                     </TouchableOpacity>
 
-                    <View style={styles.editCircle}>
+                    {/* <View style={styles.editCircle}>
                         <Image
                             source={require('../assets/pencil-icon.png')}
                             style={styles.editIcon}
                         />
-                    </View>
+                    </View> */}
                 </View>
 
-                <ProfileOptionCard
-                    header="Full Name"
-                    subheader="Biswarup Dutta"
-                    onPress={() => {navigation.navigate('Fullname') }}
-                />
-                <ProfileOptionCard
-                    header="Preferred Name"
-                    subheader="Biswarup"
-                    onPress={() =>  {navigation.navigate('PreferredName') }}
-                />
                 <View style={styles.card2}>
                     <View style={styles.leftContainer}>
-                        <Text style={styles.headerText}>Role</Text>
-                        <Text style={styles.subheaderText}>Owner</Text>
+                        <Text style={styles.headerText}>Full Name</Text>
+                        <Text style={styles.subheaderText}>{currentUser?.Username as string}</Text>
                     </View>
                 </View>
+                <View style={styles.card2}>
+                    <View style={styles.leftContainer}>
+                        <Text style={styles.headerText}>Preferred Name</Text>
+                        <Text style={styles.subheaderText}>{currentUser?.Username as string}</Text>
+                    </View>
+                </View>
+                
+                <ProfileOptionCard
+                    header="Phone number"
+                    subheader={currentUser?.PhoneNumber==null?"-":currentUser?.PhoneNumber}
+                    onPress={() => {navigation.navigate('PhoneNumber') }}
+                />
                 <View style={styles.card2}>
                     <View style={styles.leftContainer}>
                         <Text style={styles.headerText}>Work Schedule</Text>
@@ -52,15 +93,21 @@ const ProfilePage = ({navigation}:{navigation:any}) => {
                 <View style={{ padding: 15, paddingBottom: 20, paddingTop: 22 }}>
                     <Text style={styles.labelText}>Login & Security</Text>
                 </View>
-                <ProfileOptionCard
-                    header="Email"
-                    subheader="duttabiswarup2003@gmail.com"
-                    onPress={() => {navigation.navigate('Email') }}
-                />
+                <View style={styles.card2}>
+                    <View style={styles.leftContainer}>
+                        <Text style={styles.headerText}>Email</Text>
+                        <Text style={styles.subheaderText}>{currentUser?.Email as string}</Text>
+                    </View>
+                </View>
                 <ProfileOptionCard
                     header="Phone number"
-                    subheader="-"
+                    subheader={currentUser?.PhoneNumber==null?"-":currentUser?.PhoneNumber}
                     onPress={() => {navigation.navigate('PhoneNumber') }}
+                />
+                <ProfileOptionCard
+                    header="Address"
+                    subheader={currentUser?.Address==null?"-":currentUser?.Address}
+                    onPress={() => {navigation.navigate('Address') }}
                 />
                 <TouchableOpacity onPress={()=>{navigation.navigate('ChangePassword')}} style={styles.card2}>
                     <View style={styles.leftContainer}>
@@ -98,6 +145,11 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 5,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     labelText: {
         fontWeight: 'bold',

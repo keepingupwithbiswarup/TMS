@@ -52,7 +52,12 @@ const Menu = ({navigation}:{navigation:any}) => {
         <MenuCard
           text="People"
           imageSource={require('../assets/people-icon.png')}
-          onRightArrowPress={() => { }}
+          onRightArrowPress={() => { navigation.navigate("People") }}
+        />
+        <MenuCard
+          text="Departments"
+          imageSource={require('../assets/dept-icon.png')}
+          onRightArrowPress={() => { navigation.navigate("Departments") }}
         />
         <MenuCard
           text="Work Schedules"

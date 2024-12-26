@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   arrowIcon: {
-    width: 20,
-    height: 20,
+    width: 25,
+    height: 25,
     tintColor:"#aaa"
   },
 });

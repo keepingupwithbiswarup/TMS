@@ -1,14 +1,54 @@
-import { Alert, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { ActivityIndicator, Alert, Image, Modal, Pressable, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../components/Header'
 import OptionCard from '../components/OptionCard'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { AuthContext } from '../utilities/AuthProvider'
+import { User } from '../utilities/types'
+import { useFocusEffect } from '@react-navigation/native'
 
 
 
 const PersonalSettings = ({ navigation }: { navigation: any }) => {
 
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
+
+    const checkUser = async () => {
+      setLoading(true);
+      try {
+        const currentUser = await AsyncStorage.getItem('currentUser');
+        if (currentUser) {
+          setCurrentUser(JSON.parse(currentUser));
+        }
+      } catch (error) {
+        console.error("Error fetching user: ", error);
+      }
+      setLoading(false);
+    };
+
+   
+    useFocusEffect(
+      useCallback(() => {
+        checkUser();
+      }, []) 
+    );
+      
+  
+    if (loading) {
+         
+      return (
+          <SafeAreaView style={styles.container}>
+              <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#0000ff" />
+              </View>
+          </SafeAreaView>
+      );
+  }
+
+    
 
     const handleSignOut = () => {
         setModalVisible(true);
@@ -18,8 +58,18 @@ const PersonalSettings = ({ navigation }: { navigation: any }) => {
         setModalVisible(false);
     };
 
-    const confirmSignOut = () => {
-        navigation.navigate('LandingPage');
+    const confirmSignOut = async () => {
+        try {
+
+            await AsyncStorage.removeItem('currentUser');
+
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'LandingPage' }], 
+            });
+        } catch (error) {
+            console.error("Error logging out: ", error);
+        }
         setModalVisible(false);
     };
 
@@ -28,14 +78,14 @@ const PersonalSettings = ({ navigation }: { navigation: any }) => {
             <StatusBar backgroundColor={"white"} barStyle={'dark-content'} />
             <Header headingText="Personal Settings" />
             <View style={{ height: 30 }} />
-            <TouchableOpacity onPress={()=>{navigation.navigate('ProfilePage')}}>
+            <TouchableOpacity onPress={() => { navigation.navigate('ProfilePage') }}>
                 <View style={styles.card}>
                     <View style={styles.circle}>
-                        <Text style={styles.circleText}>B</Text>
+                        <Text style={styles.circleText}>{currentUser?.Username[0]}</Text>
                     </View>
                     <View style={styles.textContainer}>
-                        <Text style={styles.nameText}>Biswarup Dutta</Text>
-                        <Text style={styles.roleText}>Owner</Text>
+                        <Text style={styles.nameText}>{currentUser?.Username}</Text>
+                        <Text style={styles.roleText}>{currentUser?.Role}</Text>
                     </View>
                     <Image
                         source={require('../assets/arrow-icon.png')}
@@ -133,6 +183,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     circleText: {
         color: 'grey',
