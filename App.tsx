@@ -37,6 +37,8 @@ import UserRole from './screens/UserRole';
 import CreateDepartmentPage from './screens/CreateDepartmentPage';
 import Departments from './screens/Departments';
 import DepartmentDetails from './screens/DepartmentDetails';
+import DepartmentSetings from './screens/DepartmentSettings';
+import DepartmentMembers from './screens/DepartmentMembers';
 
 
 
@@ -90,6 +92,66 @@ const BottomTabNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+
+const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
+  const { department } = route.params;
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }: { route: any }) => ({
+        headerShown: false,
+        tabBarIcon: ({ focused, color }) => {
+          let icon;
+
+          if (route.name === 'Dashboard') {
+            icon = require('./assets/house-icon.png');
+          } else if (route.name === 'Members') {
+            icon = require('./assets/members.png');
+          } else if (route.name === 'Projects') {
+            icon = require('./assets/project-icon.png');
+          } else if (route.name === 'Tasks') {
+            icon = require('./assets/task.png');
+          } else if (route.name === 'Settings') {
+            icon = require('./assets/settings.png');
+          }
+
+          return (
+            <Image
+              source={icon}
+              style={{ width: 30, height: 30, tintColor: color }}
+            />
+          );
+        },
+        tabBarActiveTintColor: '#602bf9',
+        tabBarInactiveTintColor: '#aaa',
+        tabBarStyle: { backgroundColor: '#fff', height: 65, paddingTop: 5, elevation: 0 },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 3,
+        },
+      })}
+    >
+      <Tab.Screen name="Dashboard">
+        {(props) => <DepartmentDetails {...props} department={department} />}
+      </Tab.Screen>
+      <Tab.Screen name="Members">
+        {(props) => <DepartmentMembers {...props} department={department} />}
+      </Tab.Screen>
+      <Tab.Screen name="Projects">
+        {(props) => <DepartmentMembers {...props} department={department} />}
+      </Tab.Screen>
+      <Tab.Screen name="Tasks">
+        {(props) => <DepartmentMembers {...props} department={department} />}
+      </Tab.Screen>
+      <Tab.Screen name="Settings">
+        {(props) => <DepartmentSetings {...props} department={department} />}
+      </Tab.Screen>
+    </Tab.Navigator>
+  );
+};
+
 
 const Stack = createStackNavigator();
 
@@ -169,7 +231,7 @@ const AppNavigator = () => {
       <Stack.Screen name="UserAddress" component={UserAddress} options={{ headerShown: false }} />
       <Stack.Screen name="UserRole" component={UserRole} options={{ headerShown: false }} />
       <Stack.Screen name="Departments" component={Departments} options={{ headerShown: false }} />
-      <Stack.Screen name="DepartmentDetails" component={DepartmentDetails} options={{ headerShown: false }} />
+      <Stack.Screen name="DepartmentBottomTabNavigator" component={DepartmentBottomTabNavigator} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

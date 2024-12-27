@@ -49,22 +49,22 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
      
 
     const trackedHoursData = {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
         datasets: [
             {
-                data: [30, 35, 28, 40, 38, 35, 30], 
+                data: [30, 35, 28, 40, 38, 35], 
                 color: (opacity = 1) => `rgba(255, 99, 132, ${opacity})`, 
                 strokeWidth: 2,
                 label: 'Working Hours (Aggregated)',
             },
             {
-                data: [7, 8, 4, 9, 10, 7, 8], 
+                data: [7, 8, 4, 9, 10, 7], 
                 color: (opacity = 1) => `rgba(54, 162, 235, ${opacity})`, 
                 strokeWidth: 2,
                 label: 'Break Hours (Aggregated)',
             },
             {
-                data: [3, 4, 3, 5, 4, 3, 3], 
+                data: [3, 4, 3, 5, 4, 3], 
                 color: (opacity = 1) => `rgba(75, 192, 192, ${opacity})`, 
                 strokeWidth: 2,
                 label: 'Overtime Hours (Aggregated)',
@@ -282,9 +282,9 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: 'white',
-        borderRadius: 10,
+        borderRadius: 4,
         marginVertical: 10,
-        elevation: 6,
+        elevation: 3,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -294,8 +294,7 @@ const styles = StyleSheet.create({
         paddingTop: 15,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 16,
     },
     arrowIcon: {
         width: 20,
@@ -303,8 +302,6 @@ const styles = StyleSheet.create({
         tintColor: '#999',
     },
     divider: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
         marginHorizontal: 15,
         marginVertical: 10,
     },

@@ -73,6 +73,45 @@ mssql.connect(dbConfig).then(pool => {
           res.status(500).send('Internal Server Error');
       }
   });
+
+  app.put('/api/updatedepartment/:id', async (req, res) => {
+    const { id } = req.params; 
+    const { deptName, deptSize, deptType } = req.body;
+
+    if (!id || !deptName || !deptSize || !deptType) {
+        return res.status(400).json({
+            error: 'All fields are required: DeptName, DeptSize, DeptType, and a valid ID.'
+        });
+    }
+
+    try {
+        const query = `
+            UPDATE Departments
+            SET DeptName = @DeptName,
+                DeptSize = @DeptSize,
+                DeptType = @DeptType
+            WHERE DeptId = @Id
+        `;
+
+        const poolRequest = pool.request();
+        poolRequest.input('Id', id); 
+        poolRequest.input('DeptName', deptName);
+        poolRequest.input('DeptSize', deptSize);
+        poolRequest.input('DeptType', deptType);
+
+        const result = await poolRequest.query(query);
+
+        if (result.rowsAffected[0] === 0) {
+            return res.status(404).json({ error: 'Department not found.' });
+        }
+
+        res.status(200).json({ message: 'Department updated successfully.' });
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
   
 
     app.put('/api/updatephone/:id', async (req, res) => {

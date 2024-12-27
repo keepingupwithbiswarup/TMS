@@ -24,6 +24,7 @@ const DepartmentCard = ({ dept, onPress }: DepartmentCardProps) => (
 );
 
 interface Department {
+    DeptId: number;
     DeptName: string;
     DeptSize:string;
     DeptType: string;
@@ -105,7 +106,7 @@ const Departments = ({ navigation }: { navigation: any }) => {
                         renderItem={({ item }) => (
                             <DepartmentCard
                                 dept={item}
-                                onPress={() => navigation.navigate('DepartmentDetails', { department: item })}
+                                onPress={() => navigation.navigate('DepartmentBottomTabNavigator', { department: item.DeptId })}
                             />
                         )}
                         ListEmptyComponent={
