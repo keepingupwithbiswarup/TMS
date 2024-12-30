@@ -39,6 +39,10 @@ import Departments from './screens/Departments';
 import DepartmentDetails from './screens/DepartmentDetails';
 import DepartmentSetings from './screens/DepartmentSettings';
 import DepartmentMembers from './screens/DepartmentMembers';
+import DepartmentAssign from './screens/DepartmentAssign';
+import ProjectScreen from './screens/ProjectScreen';
+import TaskDetailsScreen from './screens/TaskDetails';
+import TaskDetails from './screens/TaskDetails';
 
 
 
@@ -140,7 +144,7 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
         {(props) => <DepartmentMembers {...props} department={department} />}
       </Tab.Screen>
       <Tab.Screen name="Projects">
-        {(props) => <DepartmentMembers {...props} department={department} />}
+        {(props) => <ProjectScreen {...props} department={department} />}
       </Tab.Screen>
       <Tab.Screen name="Tasks">
         {(props) => <DepartmentMembers {...props} department={department} />}
@@ -232,6 +236,8 @@ const AppNavigator = () => {
       <Stack.Screen name="UserRole" component={UserRole} options={{ headerShown: false }} />
       <Stack.Screen name="Departments" component={Departments} options={{ headerShown: false }} />
       <Stack.Screen name="DepartmentBottomTabNavigator" component={DepartmentBottomTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="DepartmentAssign" component={DepartmentAssign} options={{ headerShown: false }} />
+      <Stack.Screen name="TaskDetails" component={TaskDetails} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

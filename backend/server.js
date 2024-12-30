@@ -21,6 +21,7 @@ const dbConfig = {
     encrypt: false,
     trustServerCertificate: true,
   },
+ 
 };
 
 
@@ -206,6 +207,73 @@ mssql.connect(dbConfig).then(pool => {
         res.status(500).send('Internal Server Error');
       }
     });
+
+
+
+    app.put('/api/assigndepartment/:id', async (req, res) => {
+      console.log('Request Body:', req.body); 
+      console.log('Request Params:', req.params); 
+  
+      const { id } = req.params;
+      const { departmentName } = req.body;
+  
+      if (!departmentName) {
+          return res.status(400).send('Department is required');
+      }
+  
+      try {
+          const result = await pool.request()
+              .input('EmployeeId', mssql.Int, id)
+              .input('Department', mssql.NVarChar, departmentName)
+              .input('ModifiedOn', mssql.DateTime, new Date())
+              .query(`
+                  UPDATE Employees 
+                  SET Department = @Department, ModifiedOn = @ModifiedOn 
+                  WHERE EmployeeId = @EmployeeId
+              `);
+  
+          if (result.rowsAffected[0] > 0) {
+              res.status(200).send('Department updated successfully');
+          } else {
+              res.status(404).send('Employee not found');
+          }
+      } catch (err) {
+          console.error('Error updating Department:', err.message);
+          res.status(500).send('Internal Server Error');
+      }
+  });
+
+  app.delete('/api/removedepartment/:id', async (req, res) => { 
+    const { id } = req.params;
+    
+    try {
+      const result = await pool.request()
+        .input('EmployeeId', mssql.Int, id)
+        .query(`
+          UPDATE Employees
+          SET Department = NULL
+          WHERE EmployeeId = @EmployeeId
+            AND Department IS NOT NULL
+        `);
+
+      if (result.rowsAffected[0] > 0) {
+        res.status(200).send('User removed from department');
+      } else {
+        res.status(400).send('Employee not assigned to any department');
+      }
+    } catch (error) {
+      console.error('Error removing user:', error.message);
+      res.status(500).send('Internal Server Error');
+    }
+});
+
+  
+
+  
+
+    
+  
+  
 
 
 

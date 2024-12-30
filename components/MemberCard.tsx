@@ -6,11 +6,16 @@ interface MemberCardProps {
     department: string;
     role: string;
     onPress: () => void;
+    onLongPress: () => void;
+    isSelected: boolean;
 }
 
-const MemberCard: React.FC<MemberCardProps> = ({ name, department, role, onPress }) => {
+const MemberCard: React.FC<MemberCardProps> = ({ name, department, role, onPress, onLongPress,isSelected }) => {
     return (
-        <TouchableOpacity style={styles.cardContainer} onPress={onPress}>
+        <TouchableOpacity style={[
+            styles.cardContainer,
+            isSelected && { borderColor:'#4a6fe9',borderWidth:1, backgroundColor: "#dbe4ff" }, 
+          ]} onPress={onPress} onLongPress={onLongPress}>
             <View style={styles.profilePicContainer}>
                 <Text style={styles.profilePicText}>{name[0]}</Text>
             </View>
@@ -39,16 +44,16 @@ const styles = StyleSheet.create({
         marginBottom: 1,
     },
     profilePicContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#E0E0E0',
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#35374B',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
     },
     profilePicText: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
@@ -56,18 +61,18 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     memberName: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: 'bold',
         color: '#000000',
     },
     memberSublabel: {
-        fontSize: 12,
+        fontSize: 10,
         color: '#707070',
         marginTop: 2,
     },
     cardArrowIcon: {
-        width: 20,
-        height: 20,
+        width: 25,
+        height: 25,
         resizeMode: 'contain',
     },
 });
