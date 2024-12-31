@@ -1,29 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import Header from '../components/Header';
+import { User } from '../utilities/types';
 
 type Task = {
-  title: string;
-  progress: number;
-  comments: number;
-  documents: number;
-  completed: boolean;
+  TaskId: number;
+  TaskName: string;
+  Description: string;
+  DueDate: string;
+  ProjectId: number;
+  CreatedAt: string;
+  Progress?: number;
+  Comments?: number;
+  Documents?: number;
+  AssignedTo?: string;
+  Priority?: 'Low' | 'Medium' | 'High';
+  Status?: 'Due' | 'Ongoing' | 'Finished';
 };
 
-const taskData = {
-  name: 'Tasktion - Project Management Dashboard',
-  description: 'This project has a task management theme for a dashboard or web app platform. Here there is a complete brief along with the task to be completed. It involves creating user interfaces, wireframing, and more technical steps such as integration with APIs and backend services.',
-  dueDate: 'Dec 24, 2024',
-  progress: 75,
-  teamMembers: ['John Doe', 'Jane Smith', 'Sam Wilson', 'Emily Davis', 'Michael Brown'],
-  tasks: [
-    { title: 'Style Guide & Component', progress: 100, comments: 26, documents: 1, completed: true },
-    { title: 'Wireframing & Sketch', progress: 40, comments: 15, documents: 3, completed: false },
-    { title: 'UI Design & Prototype', progress: 60, comments: 12, documents: 2, completed: false },
-  ] as Task[],
+
+type Project = {
+  ProjectId: number;
+  ProjectName: string;
+  Description: string;
+  ImagePath: string | null;
+  Status: string;
+  CreatedAt: string;
+  progress?: number;
+  teamMembers?: User[];  
+  tasks?: Task[];
+  dueDate?: string;
 };
 
-const TaskDetails = ({ navigation }: { navigation: any }) => {
+
+const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => {
+  const { projectId } = route.params;
+  const [projectData, setProjectData] = useState<Project | null>(null);
   const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [statistics, setStatistics] = useState([
@@ -35,46 +47,143 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
     { day: 'S', onTarget: 25, tasksTarget: 20, offTarget: 5 },
   ]);
 
-  const formatTime = (seconds:number) => {
+  const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  const fetchProjectData = async () => {
+    try {
+      const response = await fetch('http://192.168.10.137:5000/api/projects');
+      const data = await response.json();
+
+      const taskResponse = await fetch('http://192.168.10.137:5000/api/tasks');
+      const allTasks = await taskResponse.json();
+
+      const teamResponse = await fetch('http://192.168.10.137:5000/api/teams');
+      const allTeams = await teamResponse.json();
+
+      const teamMemberResponse = await fetch('http://192.168.10.137:5000/api/teammembers');
+      const allTeamMembers = await teamMemberResponse.json();
+
+      const employeesResponse = await fetch('http://192.168.10.137:5000/api/employees');
+      const allEmployees = await employeesResponse.json();
+
+      const project = data.find((item: any) => item.ProjectId == projectId);
+
+      if (!project) {
+        console.error('Project not found');
+        return;
+      }
+
+
+      const projectTeams = allTeams.filter((item: any) => item.ProjectId == projectId);
+
+      if (projectTeams.length === 0) {
+        console.error('No teams found for the project');
+        return;
+      }
+
+
+      const team = projectTeams[0];
+      const teamMembers = allTeamMembers.filter((item: any) => item.TeamId == team.TeamId);
+
+      if (teamMembers.length === 0) {
+        console.error('No team members found for this team');
+        return;
+      }
+
+
+      const projectTeam = teamMembers.map((member: any) => {
+        const employee = allEmployees.find((emp: any) => emp.EmployeeId == member.EmployeeId);
+        return employee || null;
+      }).filter((emp: any) => emp !== null);
+
+      console.log(projectTeam);
+
+
+
+
+      if (project) {
+        const tasksForProject = allTasks.filter((task: any) => task.ProjectId == projectId);
+        const createdAt = project.CreatedAt;
+        console.log('createdAt:', createdAt);
+
+        const createdDate = new Date(createdAt);
+        if (isNaN(createdDate.getTime())) {
+          throw new Error('Invalid createdAt date');
+        } else {
+          console.log('Valid createdAt date:', createdDate);
+        }
+
+        const dueDate = new Date(createdDate);
+        dueDate.setDate(createdDate.getDate() + 90);
+
+        const getFormattedDate = (date: Date) => {
+          const day = date.getDate();
+          const month = date.toLocaleString('en-GB', { month: 'short' });
+          const year = date.getFullYear();
+
+          const suffix = ['st', 'nd', 'rd'][((day % 10) - 1) % 10] || 'th';
+
+          return `${day}${suffix} ${month}, ${year}`;
+        };
+
+        setProjectData({
+          ...project,
+          tasks: tasksForProject,
+          dueDate: getFormattedDate(dueDate),
+          teamMembers: projectTeam,
+        });
+
+      } else {
+        console.error('Project not found!');
+      }
+    } catch (error) {
+      console.error('Error fetching project data:', error);
+    }
+  };
+
   useEffect(() => {
+    fetchProjectData();
+
+
     const interval = setInterval(() => {
       setElapsedTime((prevTime) => prevTime + 1);
     }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
-  const handleBarPress = (day:string, type:any, count:number) => {
+
+    return () => clearInterval(interval);
+  }, [projectId]);
+
+  const handleBarPress = (day: string, type: any, count: number) => {
     Alert.alert(`${day} Statistics`, `${count} tasks (${type})`);
   };
+
 
 
   const renderTask = (task: Task) => {
     return (
       <View style={styles.taskCard}>
         <View style={styles.taskTitleContainer}>
-          <Text style={styles.taskTitle}>{task.title}</Text>
+          <Text style={styles.taskTitle}>{task.TaskName}</Text>
           <Image
-            source={task.completed
-              ? require('../assets/tick.png')
-              : require('../assets/checkbox.png')}
-            style={[styles.checkboxIcon, { tintColor: task.completed ? '#4CAF50' : '#666666' }]}
+            source={task.Status == "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
+            style={[styles.checkboxIcon, { tintColor: task.Status == "Finished" ? '#4CAF50' : '#666666' }]}
           />
         </View>
+        <Text style={{padding:1, color:"#7D7C7C",paddingVertical:5}}>{task.Description}</Text>
 
         <View style={styles.taskIcons}>
           <View style={styles.iconWrapper}>
             <Image source={require('../assets/comments-icon.png')} style={styles.icon} />
-            <Text style={styles.iconText}>{task.comments} Comments</Text>
+            <Text style={styles.iconText}>{task.Comments} Comments</Text>
           </View>
           <View style={styles.iconWrapper}>
             <Image source={require('../assets/attachment.png')} style={styles.icon} />
-            <Text style={styles.iconText}>{task.documents} Documents</Text>
+            <Text style={styles.iconText}>{task.Documents} Documents</Text>
           </View>
         </View>
       </View>
@@ -82,14 +191,14 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
   };
 
   const renderTeamMembers = () => {
-    const displayedMembers = taskData.teamMembers.slice(0, 3);
-    const remainingCount = taskData.teamMembers.length - 3;
+    const displayedMembers = projectData?.teamMembers?.slice(0, 3) || [];
+    const remainingCount = (projectData?.teamMembers?.length ?? 0) - 3;
 
     return (
       <View style={styles.teamList}>
-        {displayedMembers.map((member, index) => (
+        {displayedMembers?.map((member, index) => (
           <View key={index} style={styles.memberCircle}>
-            <Text style={styles.memberInitial}>{member.charAt(0)}</Text>
+            <Text style={styles.memberInitial}>{member?.Username.charAt(0)}</Text>
           </View>
         ))}
         {remainingCount > 0 && (
@@ -101,6 +210,15 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
     );
   };
 
+  if (!projectData) {
+    return (
+      <View style={styles.container}>
+        <Header headingText="Project Details" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Header headingText="Project Details" />
@@ -110,14 +228,14 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
             <Image source={require('../assets/play.png')} style={{ height: 25, width: 25, tintColor: 'white' }} />
             <Text style={styles.badgeText}>In Progress</Text>
           </View>
-          <Text style={styles.taskName}>{taskData.name}</Text>
+          <Text style={styles.taskName}>{projectData.ProjectName}</Text>
         </View>
         <Text style={{ fontSize: 14, color: '#686D76', marginBottom: 8 }}>Description</Text>
 
         <Text style={styles.description}>
           {isDescriptionExpanded
-            ? taskData.description
-            : `${taskData.description.slice(0, 150)}...`}
+            ? projectData.Description
+            : `${projectData.Description.slice(0, 150)}...`}
           <Text onPress={() => setDescriptionExpanded(!isDescriptionExpanded)} style={styles.readMoreText}>
             {isDescriptionExpanded ? ' Show Less' : 'Read More'}
           </Text>
@@ -130,13 +248,13 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
           </View>
           <View style={styles.dueDateWrapper}>
             <Text style={styles.dueDateLabel}>Due Date:</Text>
-            <Text style={styles.dueDate}>{taskData.dueDate}</Text>
+            <Text style={styles.dueDate}>{projectData.dueDate}</Text>
           </View>
         </View>
 
         <View style={styles.taskProgressContainer}>
           <Text style={styles.sectionTitle}>Tasks</Text>
-          {taskData.tasks.map((task, index) => renderTask(task))}
+          {projectData.tasks?.map((task, index) => renderTask(task))}
         </View>
 
         <Text style={{
@@ -169,7 +287,7 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
           <View style={[styles.statContainer, { borderLeftWidth: 0.7, borderColor: "#9AA6B2" }]}>
             <Text style={styles.statLabel}>Total Tasks Activity</Text>
             <View style={styles.statValueContainer}>
-              <Text style={styles.statValue}>130 Tasks</Text>
+              <Text style={styles.statValue}>5 Tasks</Text>
               <View style={styles.badgeContainerDown}>
                 <Image source={require('../assets/down-arrow.png')} style={styles.downarrowIcon} />
                 <Text style={styles.percentageDown}>14%</Text>
@@ -187,15 +305,15 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
               style={styles.arrowIcon}
             />
 
-            <Text style={styles.cardNumber}>12</Text>
+            <Text style={styles.cardNumber}>4</Text>
             <Text style={styles.cardLabel}>Ongoing Tasks</Text>
           </View>
           <View style={[styles.card, styles.completedCard]}>
-          <Image
-      source={require('../assets/arrow-icon.png')}
-      style={styles.arrowIcon}
-    />
-            <Text style={styles.cardNumber}>86</Text>
+            <Image
+              source={require('../assets/arrow-icon.png')}
+              style={styles.arrowIcon}
+            />
+            <Text style={styles.cardNumber}>1</Text>
             <Text style={styles.cardLabel}>Tasks Completed</Text>
           </View>
         </View>
@@ -203,7 +321,7 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
         <View style={styles.statisticsContainer}>
           <Text style={styles.statisticsTitle}>Project Statistics</Text>
 
-          
+
 
           <View style={styles.barChart}>
             {statistics.map((stat, index) => (
@@ -225,9 +343,9 @@ const TaskDetails = ({ navigation }: { navigation: any }) => {
             ))}
           </View>
           <View style={styles.legendContainer}>
-            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#1e88e5' }]} /><Text style={{fontSize:12}}>On Target</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#000' }]} /><Text style={{fontSize:12}}>Tasks Target</Text></View>
-            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#d32f2f' }]} /><Text style={{fontSize:12}}>Off Target</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#1e88e5' }]} /><Text style={{ fontSize: 12 }}>On Target</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#000' }]} /><Text style={{ fontSize: 12 }}>Tasks Target</Text></View>
+            <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#d32f2f' }]} /><Text style={{ fontSize: 12 }}>Off Target</Text></View>
           </View>
         </View>
 
@@ -483,7 +601,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     height: 150,
     paddingBottom: 20,
-    position:"relative",
+    position: "relative",
   },
   inProgressCard: {
     backgroundColor: '#1a1a1a',
@@ -529,7 +647,7 @@ const styles = StyleSheet.create({
   barChart: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
-    alignItems:"flex-end",
+    alignItems: "flex-end",
   },
   barGroup: {
     alignItems: 'center',
@@ -574,7 +692,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
-  
+
 
 });
 

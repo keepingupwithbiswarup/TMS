@@ -114,8 +114,6 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
             icon = require('./assets/members.png');
           } else if (route.name === 'Projects') {
             icon = require('./assets/project-icon.png');
-          } else if (route.name === 'Tasks') {
-            icon = require('./assets/task.png');
           } else if (route.name === 'Settings') {
             icon = require('./assets/settings.png');
           }
@@ -145,9 +143,6 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
       </Tab.Screen>
       <Tab.Screen name="Projects">
         {(props) => <ProjectScreen {...props} department={department} />}
-      </Tab.Screen>
-      <Tab.Screen name="Tasks">
-        {(props) => <DepartmentMembers {...props} department={department} />}
       </Tab.Screen>
       <Tab.Screen name="Settings">
         {(props) => <DepartmentSetings {...props} department={department} />}

@@ -313,6 +313,7 @@ const styles = StyleSheet.create({
   noEmployeesText: {
     fontSize: 16,
     color: '#999',
+    marginTop:20,
   },
   headerContainer: {
     flexDirection: 'row',

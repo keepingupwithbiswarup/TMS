@@ -47,6 +47,42 @@ mssql.connect(dbConfig).then(pool => {
         res.status(500).send('Internal Server Error');
       }
     });
+    app.get('/api/projects', async (req, res) => {
+      try {
+        const result = await pool.request().query('SELECT * FROM Project');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/tasks', async (req, res) => {
+      try {
+        const result = await pool.request().query('SELECT * FROM Task');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/teams', async (req, res) => {
+      try {
+        const result = await pool.request().query('SELECT * FROM Team');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/teammembers', async (req, res) => {
+      try {
+        const result = await pool.request().query('SELECT * FROM TeamMembers');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
 
     app.post('/api/createdepartment', async (req, res) => {
       const { deptName, deptSize, deptType } = req.body;
