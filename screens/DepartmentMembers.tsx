@@ -43,7 +43,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
     try {
       setLoading(true);
       const departmentResponse = await fetch(
-        'http://192.168.10.137:5000/api/departments'
+        'http://192.168.10.122:5000/api/departments'
       );
       const departmentData = await departmentResponse.json();
       const matchedDepartment = departmentData.find(
@@ -58,7 +58,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
       }
 
       const employeesResponse = await fetch(
-        'http://192.168.10.137:5000/api/employees'
+        'http://192.168.10.122:5000/api/employees'
       );
       const employeesData = await employeesResponse.json();
 
@@ -116,7 +116,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
   
       const deletionPromises = selectedUsers.map(async (user) => {
         const response = await fetch(
-          `http://192.168.10.137:5000/api/removedepartment/${user.EmployeeId}`,
+          `http://192.168.10.122:5000/api/removedepartment/${user.EmployeeId}`,
           { method: 'DELETE' }
         );
   

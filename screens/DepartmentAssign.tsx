@@ -34,7 +34,7 @@ const DepartmentAssign = ({ navigation,route }: { navigation: any,route:any }) =
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.137:5000/api/employees');
+            const response = await axios.get('http://192.168.10.122:5000/api/employees');
             const filteredUsers = response.data.filter(
                 (user: User) => user.Department === null || user.Department === ''
             );
@@ -134,7 +134,7 @@ const DepartmentAssign = ({ navigation,route }: { navigation: any,route:any }) =
     
                 try {
                     const response = await fetch(
-                        `http://192.168.10.137:5000/api/assigndepartment/${employeeId}`,
+                        `http://192.168.10.122:5000/api/assigndepartment/${employeeId}`,
                         {
                             method: 'PUT',
                             headers: {

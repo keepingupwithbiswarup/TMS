@@ -35,7 +35,7 @@ const DepartmentSetings: React.FC<DepartmentDetailsProps> = ({ department, navig
             const fetchDepartments = async () => {
                 try {
                     setLoading(true);
-                    const response = await fetch('http://192.168.10.137:5000/api/departments');
+                    const response = await fetch('http://192.168.10.122:5000/api/departments');
                     const data = await response.json();
 
 

@@ -50,7 +50,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
       const result = await loginUser(email, password);
       console.log('Login Successful:', result);
 
-      const employeeResponse = await axios.get(`http://192.168.10.137:5000/api/employees`, {
+      const employeeResponse = await axios.get(`http://192.168.10.122:5000/api/employees`, {
         params: { Email: email },
       });
 

@@ -24,7 +24,7 @@ import {
         setLoading(true);
         try {
     
-          const response = await fetch(`http://192.168.10.137:5000/api/employees`);
+          const response = await fetch(`http://192.168.10.122:5000/api/employees`);
           if (response.ok) {
             const users = await response.json(); 
         

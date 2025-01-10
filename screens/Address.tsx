@@ -66,7 +66,7 @@ const Address = ({ navigation }: { navigation: any }) => {
           }
           
           try {
-            const response = await fetch(`http://192.168.10.137:5000/api/updateaddress/${currentUser.EmployeeId}`, {
+            const response = await fetch(`http://192.168.10.122:5000/api/updateaddress/${currentUser.EmployeeId}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',

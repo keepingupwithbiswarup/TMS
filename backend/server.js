@@ -303,6 +303,114 @@ mssql.connect(dbConfig).then(pool => {
     }
 });
 
+
+app.post('/api/createproject', async (req, res) => {
+  const { projectName, description, dueDate, deptId, employeeId } = req.body;
+
+  if (!projectName || !description || !dueDate || !deptId || !employeeId) {
+      return res.status(400).json({
+          error: 'All fields are required: ProjectName, Description, DueDate, DeptId, and EmployeeId.',
+      });
+  }
+
+  const transaction = new mssql.Transaction();
+
+  try {
+      await transaction.begin();
+
+      const insertProjectQuery = `
+          INSERT INTO Project (ProjectName, Description, DueDate, DeptId)
+          OUTPUT INSERTED.ProjectId
+          VALUES (@ProjectName, @Description, @DueDate, @DeptId)
+      `;
+      const projectRequest = transaction.request();
+      projectRequest.input('ProjectName', projectName);
+      projectRequest.input('Description', description);
+      projectRequest.input('DueDate', dueDate);
+      projectRequest.input('DeptId', deptId);
+
+      const projectResult = await projectRequest.query(insertProjectQuery);
+      const projectId = projectResult.recordset[0].ProjectId;
+
+      const insertTeamQuery = `
+          INSERT INTO Team (ProjectId)
+          OUTPUT INSERTED.TeamId
+          VALUES (@ProjectId)
+      `;
+      const teamRequest = transaction.request();
+      teamRequest.input('ProjectId', projectId);
+
+      const teamResult = await teamRequest.query(insertTeamQuery);
+      const teamId = teamResult.recordset[0].TeamId;
+
+      const insertTeamMemberQuery = `
+          INSERT INTO TeamMembers (EmployeeId, TeamId)
+          VALUES (@EmployeeId, @TeamId)
+      `;
+      const teamMemberRequest = transaction.request();
+      teamMemberRequest.input('EmployeeId', employeeId);
+      teamMemberRequest.input('TeamId', teamId);
+
+      await teamMemberRequest.query(insertTeamMemberQuery);
+
+      await transaction.commit();
+
+      res.status(201).json({
+          message: 'Project, Team, and Team Member created successfully.',
+          projectId,
+          teamId,
+      });
+  } catch (err) {
+      console.error('Error executing transaction:', err.message);
+      await transaction.rollback();
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/api/createtask', async (req, res) => {
+  const { taskName, description, dueDate, projectId } = req.body;
+
+
+  if (!taskName || !description || !dueDate || !projectId) {
+    return res.status(400).json({
+      error: 'All fields are required: TaskName, Description, DueDate, and ProjectId.',
+    });
+  }
+
+  const transaction = new mssql.Transaction();
+
+  try {
+    await transaction.begin();
+
+    const insertTaskQuery = `
+      INSERT INTO Task (TaskName, Description, DueDate, ProjectId)
+      OUTPUT INSERTED.TaskId
+      VALUES (@TaskName, @Description, @DueDate, @ProjectId)
+    `;
+    const taskRequest = transaction.request();
+    taskRequest.input('TaskName', taskName);
+    taskRequest.input('Description', description);
+    taskRequest.input('DueDate', dueDate);
+    taskRequest.input('ProjectId', projectId);
+
+    const taskResult = await taskRequest.query(insertTaskQuery);
+    const taskId = taskResult.recordset[0].TaskId;
+
+    await transaction.commit();
+
+
+    res.status(201).json({
+      message: 'Task created successfully.',
+      taskId,
+    });
+  } catch (err) {
+    console.error('Error executing transaction:', err.message);
+    await transaction.rollback();
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
   
 
   

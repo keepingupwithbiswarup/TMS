@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform } from 'react-native';
 import Header from '../components/Header';
+
 import { User } from '../utilities/types';
+import usePdfSource from '../utilities/usePdfSource';
+
+
+
+
 
 type Task = {
   TaskId: number;
@@ -27,10 +33,13 @@ type Project = {
   Status: string;
   CreatedAt: string;
   progress?: number;
-  teamMembers?: User[];  
+  teamMembers?: User[];
   tasks?: Task[];
   dueDate?: string;
 };
+
+
+
 
 
 const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => {
@@ -38,6 +47,14 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
   const [projectData, setProjectData] = useState<Project | null>(null);
   const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [source, changeSource] = usePdfSource();
+
+  const openPdf = (fileName: string) => {
+    const newUri = `bundle-assets://${fileName}`;
+    changeSource(newUri);
+    navigation.navigate('DocumentViewPage', { source: { uri: newUri, cache: true } });
+  };
+
   const [statistics, setStatistics] = useState([
     { day: 'M', onTarget: 30, tasksTarget: 20, offTarget: 10 },
     { day: 'T', onTarget: 40, tasksTarget: 25, offTarget: 15 },
@@ -46,6 +63,13 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     { day: 'F', onTarget: 35, tasksTarget: 25, offTarget: 15 },
     { day: 'S', onTarget: 25, tasksTarget: 20, offTarget: 5 },
   ]);
+
+
+
+
+
+
+
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -56,19 +80,19 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
   const fetchProjectData = async () => {
     try {
-      const response = await fetch('http://192.168.10.137:5000/api/projects');
+      const response = await fetch('http://192.168.10.122:5000/api/projects');
       const data = await response.json();
 
-      const taskResponse = await fetch('http://192.168.10.137:5000/api/tasks');
+      const taskResponse = await fetch('http://192.168.10.122:5000/api/tasks');
       const allTasks = await taskResponse.json();
 
-      const teamResponse = await fetch('http://192.168.10.137:5000/api/teams');
+      const teamResponse = await fetch('http://192.168.10.122:5000/api/teams');
       const allTeams = await teamResponse.json();
 
-      const teamMemberResponse = await fetch('http://192.168.10.137:5000/api/teammembers');
+      const teamMemberResponse = await fetch('http://192.168.10.122:5000/api/teammembers');
       const allTeamMembers = await teamMemberResponse.json();
 
-      const employeesResponse = await fetch('http://192.168.10.137:5000/api/employees');
+      const employeesResponse = await fetch('http://192.168.10.122:5000/api/employees');
       const allEmployees = await employeesResponse.json();
 
       const project = data.find((item: any) => item.ProjectId == projectId);
@@ -174,7 +198,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
             style={[styles.checkboxIcon, { tintColor: task.Status == "Finished" ? '#4CAF50' : '#666666' }]}
           />
         </View>
-        <Text style={{padding:1, color:"#7D7C7C",paddingVertical:5}}>{task.Description}</Text>
+        <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
 
         <View style={styles.taskIcons}>
           <View style={styles.iconWrapper}>
@@ -221,7 +245,23 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
   return (
     <View style={styles.container}>
-      <Header headingText="Project Details" />
+      <View style={styles.headerContainer2}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Image
+            source={require('../assets/back-arrow.png')}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.headerText}>Project Details</Text>
+
+        <TouchableOpacity onPress={() => { navigation.navigate('AddTask',{projectId:projectId}) }} style={styles.plusButton}>
+          <Image
+            source={require('../assets/add-icon.png')}
+            style={styles.plusIcon}
+          />
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <View style={styles.badgeContainer}>
@@ -349,6 +389,57 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
           </View>
         </View>
 
+        <Text style={{
+          fontSize: 18,
+          fontWeight: '600',
+          color: '#333333',
+          padding: 3,
+          marginTop: 25,
+        }}>List of documents attached</Text>
+
+        <Text style={{
+          fontSize: 13,
+          fontWeight: '400',
+          color: '#686D76',
+          padding: 3,
+          fontStyle: "italic",
+        }}>View the documents attached by clicking on them</Text>
+
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={() => openPdf('resume.pdf')}
+            style={styles.selectPdfButton}
+          >
+            <View style={styles.iconTextContainer}>
+              <Image
+                source={require('../assets/report.png')}
+                style={styles.iconreport}
+              />
+              <Text style={styles.selectPdfText}>report.pdf</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={() => openPdf('sample.pdf')}
+            style={styles.selectPdfButton}
+          >
+            <View style={styles.iconTextContainer}>
+              <Image
+                source={require('../assets/report.png')}
+                style={styles.iconreport}
+              />
+              <Text style={styles.selectPdfText}>report2.pdf</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+
+
+
+
 
 
 
@@ -364,6 +455,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
   },
+  iconTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pdf: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  iconreport: {
+    width: 28,
+    height: 28,
+    marginRight: 10,
+    tintColor: 'white',
+  },
+  selectPdfButton: {
+    paddingVertical: 3,
+    width: "35%",
+    paddingHorizontal: 11,
+    backgroundColor: '#C62E2E',
+    borderRadius: 3,
+    marginVertical: 2,
+  },
+  buttonContainer: {
+    marginTop: 5,
+  },
+  selectPdfText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  button: {
+    padding: 10,
+    backgroundColor: 'blue',
+    borderRadius: 5,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  closeButton: {
+    padding: 10,
+    backgroundColor: 'red',
+    marginTop: 20,
+    borderRadius: 5,
+  },
   scrollContainer: {
     padding: 20,
     paddingBottom: 30,
@@ -372,6 +509,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     position: 'relative',
   },
+
+  headerContainer2: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    elevation: 1,
+    marginBottom: 1,
+},
   taskName: {
     fontSize: 28,
     fontWeight: '800',
@@ -533,6 +681,23 @@ const styles = StyleSheet.create({
     color: '#686D76',
     marginBottom: 15,
   },
+  backIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
+},
+headerText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    alignSelf: 'center',
+},
+plusButton: {
+    position: 'absolute',
+    right: 20,
+    top: 20,
+    zIndex: 10,
+},
   statValue: {
     fontSize: 17,
     fontWeight: '600',
@@ -653,6 +818,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
+  backButton: {
+    position: 'absolute',
+    left: 15,
+    top: 20,
+    zIndex: 10,
+},
+plusIcon: {
+  width: 25,
+  height: 25,
+  resizeMode: 'contain',
+},
   bar: {
     width: 13,
     marginBottom: 2,

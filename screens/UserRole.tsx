@@ -67,7 +67,7 @@ const UserRole = ({ route, navigation }: { route: any; navigation: any }) => {
   const updateRole = async () => {
     if (role !== initialRole && role.length > 0) {
       try {
-        const response = await fetch(`http://192.168.10.137:5000/api/updaterole/${employeeId}`, {
+        const response = await fetch(`http://192.168.10.122:5000/api/updaterole/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

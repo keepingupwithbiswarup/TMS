@@ -39,7 +39,7 @@ const Departments = ({ navigation }: { navigation: any }) => {
     const fetchDepartments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.137:5000/api/departments');
+            const response = await axios.get('http://192.168.10.122:5000/api/departments');
             setDepartments(response.data);
         } catch (error) {
             console.error('Error fetching departments:', error);

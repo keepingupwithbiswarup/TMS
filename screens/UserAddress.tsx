@@ -16,7 +16,7 @@ const UserAddress = ({ route, navigation }: { route: any; navigation: any }) => 
     setLoading(true);
     try {
 
-      const response = await fetch(`http://192.168.10.137:5000/api/employees`);
+      const response = await fetch(`http://192.168.10.122:5000/api/employees`);
       if (response.ok) {
         const users = await response.json(); 
         const currentUser = users.find((user: any) => user.EmployeeId === employeeId);
@@ -61,7 +61,7 @@ const UserAddress = ({ route, navigation }: { route: any; navigation: any }) => 
   const updateAddress = async () => {
     if (address !== initialAddress && address.length > 0) {
       try {
-        const response = await fetch(`http://192.168.10.137:5000/api/updateaddress/${employeeId}`, {
+        const response = await fetch(`http://192.168.10.122:5000/api/updateaddress/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

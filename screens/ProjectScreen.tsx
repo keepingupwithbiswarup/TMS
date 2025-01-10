@@ -14,7 +14,8 @@ interface DepartmentDetailsProps {
     navigation: any;
 }
 
-const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation }) => {
+const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, department }) => {
+    console.log(department);
     const [filter, setFilter] = useState('In Progress');
     const [searchQuery, setSearchQuery] = useState('');
     const [projects, setProjects] = useState<any[]>([]);
@@ -27,16 +28,19 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation }) => {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch('http://192.168.10.137:5000/api/projects');
+                const response = await fetch('http://192.168.10.122:5000/api/projects');
                 const data = await response.json();
-                
-                const mappedProjects = data.map((project: any) => ({
+                const filteredData = data.filter((project: any) => project.DeptId === department);
+
+
+
+                const mappedProjects = filteredData.map((project: any) => ({
                     id: project.ProjectId.toString(),
                     name: project.ProjectName,
-                    progress: project.Status === 'Ongoing' ? 50 : project.Status === 'Finished' ? 100 : 0, 
+                    progress: project.Status === 'Ongoing' ? 50 : project.Status === 'Finished' ? 100 : 0,
                     status: project.Status,
-                    comments: 0, 
-                    documents: 0, 
+                    comments: 0,
+                    documents: 0,
                 }));
                 setProjects(mappedProjects);
             } catch (error) {
@@ -57,14 +61,14 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation }) => {
             return project.progress > 0 && project.progress < 100;
         }
         return project.status === filter;
-    }).filter((project) => 
+    }).filter((project) =>
         project.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const renderProject = ({ item }: { item: any }) => {
         const progressValue = Math.max(0, Math.min(Number(item.progress) / 100, 1));
         let statusText = '';
-        let statusBackgroundColor = '#dbe4ff'; 
+        let statusBackgroundColor = '#dbe4ff';
         let statusTextColor = '#4a6fe9';
         let statusProgressColor = '#4a6fe9';
 
@@ -82,7 +86,7 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation }) => {
         }
 
         return (
-            <TouchableOpacity onPress={() => navigation.navigate('TaskDetails',{projectId:item.id})} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => navigation.navigate('TaskDetails', { projectId: item.id })} activeOpacity={0.8}>
                 <View style={styles.projectCard}>
                     <View style={styles.header}>
                         <View style={[styles.statusBadge, { backgroundColor: statusBackgroundColor }]} >
@@ -123,7 +127,23 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <Header headingText="Projects" />
+            <View style={styles.headerContainer}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Image
+                        source={require('../assets/back-arrow.png')}
+                        style={styles.backIcon}
+                    />
+                </TouchableOpacity>
+
+                <Text style={styles.headerText}>Projects</Text>
+
+                <TouchableOpacity onPress={() => { navigation.navigate('AddProjectScreen', { department: department }) }} style={styles.plusButton}>
+                    <Image
+                        source={require('../assets/add-icon.png')}
+                        style={styles.plusIcon}
+                    />
+                </TouchableOpacity>
+            </View>
 
             <View style={styles.filterContainer}>
                 <TouchableOpacity
@@ -289,6 +309,44 @@ const styles = StyleSheet.create({
     filterText: {
         fontSize: 14,
         color: '#FFF',
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        paddingVertical: 20,
+        paddingHorizontal: 15,
+        elevation: 1,
+        marginBottom: 1,
+    },
+    backButton: {
+        position: 'absolute',
+        left: 15,
+        top: 20,
+        zIndex: 10,
+    },
+    backIcon: {
+        width: 20,
+        height: 20,
+        resizeMode: 'contain',
+    },
+    headerText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        alignSelf: 'center',
+    },
+    plusButton: {
+        position: 'absolute',
+        right: 20,
+        top: 20,
+        zIndex: 10,
+    },
+    plusIcon: {
+        width: 20,
+        height: 20,
+        resizeMode: 'contain',
     },
 });
 

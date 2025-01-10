@@ -26,7 +26,7 @@ const ChooseGoalPage = ({ navigation,route }: { navigation: any,route:any }) => 
         };
 
         try {
-            const response = await fetch('http://192.168.10.137:5000/api/createdepartment', {
+            const response = await fetch('http://192.168.10.122:5000/api/createdepartment', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -59,7 +59,7 @@ const UserPhone = ({ route, navigation }: { route: any; navigation: any }) => {
   const updatePhoneNumber = async () => {
     if (phone !== initialPhone && phone.length === 10) {
       try {
-        const response = await fetch(`http://192.168.10.137:5000/api/updatephone/${employeeId}`, {
+        const response = await fetch(`http://192.168.10.122:5000/api/updatephone/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

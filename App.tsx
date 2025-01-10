@@ -43,6 +43,14 @@ import DepartmentAssign from './screens/DepartmentAssign';
 import ProjectScreen from './screens/ProjectScreen';
 import TaskDetailsScreen from './screens/TaskDetails';
 import TaskDetails from './screens/TaskDetails';
+import AddProjectScreen from './screens/AddProjectScreen';
+
+import { enableSecureView, disableSecureView, forbidAndroidShare, allowAndroidShare } from 'react-native-prevent-screenshot-ios-android';
+import { Platform } from 'react-native'
+import DocumentViewPage from './screens/DocumentViewPage';
+import AddTask from './screens/AddTask';
+
+
 
 
 
@@ -233,11 +241,24 @@ const AppNavigator = () => {
       <Stack.Screen name="DepartmentBottomTabNavigator" component={DepartmentBottomTabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="DepartmentAssign" component={DepartmentAssign} options={{ headerShown: false }} />
       <Stack.Screen name="TaskDetails" component={TaskDetails} options={{ headerShown: false }} />
+      <Stack.Screen name="AddProjectScreen" component={AddProjectScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="DocumentViewPage" component={DocumentViewPage} options={{ headerShown: false }} />
+      <Stack.Screen name="AddTask" component={AddTask} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
 
+
+
 const App = () => {
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      forbidAndroidShare(); 
+    }
+    if (Platform.OS === 'ios') {
+      enableSecureView();    
+    }
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>

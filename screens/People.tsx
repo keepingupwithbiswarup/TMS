@@ -15,7 +15,7 @@ const People = ({ navigation }: { navigation: any }) => {
     const fetchEmployees = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.137:5000/api/employees');
+            const response = await axios.get('http://192.168.10.122:5000/api/employees');
             setEmployees(response.data);
         } catch (error) {
             console.error('Error fetching employees:', error);
