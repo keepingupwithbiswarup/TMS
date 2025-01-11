@@ -49,6 +49,7 @@ import { enableSecureView, disableSecureView, forbidAndroidShare, allowAndroidSh
 import { Platform } from 'react-native'
 import DocumentViewPage from './screens/DocumentViewPage';
 import AddTask from './screens/AddTask';
+import TeamMembers from './screens/TeamMembers';
 
 
 
@@ -244,6 +245,7 @@ const AppNavigator = () => {
       <Stack.Screen name="AddProjectScreen" component={AddProjectScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DocumentViewPage" component={DocumentViewPage} options={{ headerShown: false }} />
       <Stack.Screen name="AddTask" component={AddTask} options={{ headerShown: false }} />
+      <Stack.Screen name="TeamMembers" component={TeamMembers} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

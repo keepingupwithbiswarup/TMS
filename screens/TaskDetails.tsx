@@ -9,6 +9,16 @@ import usePdfSource from '../utilities/usePdfSource';
 
 
 
+type Subtask = {
+  SubTaskId: number;
+  SubTaskName: string;
+  Status?: 'Due' | 'Ongoing' | 'Finished';
+  CreatedAt: string;
+  DueDate: string;
+  Description: string;
+  Comments: string;
+};
+
 type Task = {
   TaskId: number;
   TaskName: string;
@@ -22,7 +32,9 @@ type Task = {
   AssignedTo?: string;
   Priority?: 'Low' | 'Medium' | 'High';
   Status?: 'Due' | 'Ongoing' | 'Finished';
+  Subtasks?: Subtask[];
 };
+
 
 
 type Project = {
@@ -48,6 +60,14 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
   const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [source, changeSource] = usePdfSource();
+  const [visibleSubtasks, setVisibleSubtasks] = useState<{ [key: number]: boolean }>({});
+
+  const toggleSubtaskVisibility = (taskId: number) => {
+    setVisibleSubtasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId],
+    }));
+  };
 
   const openPdf = (fileName: string) => {
     const newUri = `bundle-assets://${fileName}`;
@@ -86,6 +106,9 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       const taskResponse = await fetch('http://192.168.10.122:5000/api/tasks');
       const allTasks = await taskResponse.json();
 
+      const subtaskResponse = await fetch('http://192.168.10.122:5000/api/subtasks');
+      const allSubtasks = await subtaskResponse.json();
+
       const teamResponse = await fetch('http://192.168.10.122:5000/api/teams');
       const allTeams = await teamResponse.json();
 
@@ -102,14 +125,12 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
         return;
       }
 
-
       const projectTeams = allTeams.filter((item: any) => item.ProjectId == projectId);
 
       if (projectTeams.length === 0) {
         console.error('No teams found for the project');
         return;
       }
-
 
       const team = projectTeams[0];
       const teamMembers = allTeamMembers.filter((item: any) => item.TeamId == team.TeamId);
@@ -119,19 +140,23 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
         return;
       }
 
-
       const projectTeam = teamMembers.map((member: any) => {
         const employee = allEmployees.find((emp: any) => emp.EmployeeId == member.EmployeeId);
         return employee || null;
       }).filter((emp: any) => emp !== null);
 
-      console.log(projectTeam);
-
-
-
 
       if (project) {
         const tasksForProject = allTasks.filter((task: any) => task.ProjectId == projectId);
+
+
+        const tasksWithSubtasks = tasksForProject.map((task: any) => {
+          const subtasks = allSubtasks.filter((subtask: any) => subtask.TaskId === task.TaskId);
+
+          return { ...task, Subtasks: subtasks };
+        });
+
+
         const createdAt = project.CreatedAt;
         console.log('createdAt:', createdAt);
 
@@ -157,11 +182,10 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
         setProjectData({
           ...project,
-          tasks: tasksForProject,
+          tasks: tasksWithSubtasks,
           dueDate: getFormattedDate(dueDate),
           teamMembers: projectTeam,
         });
-
       } else {
         console.error('Project not found!');
       }
@@ -169,6 +193,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       console.error('Error fetching project data:', error);
     }
   };
+
 
   useEffect(() => {
     fetchProjectData();
@@ -188,17 +213,75 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
 
 
-  const renderTask = (task: Task) => {
+  const renderTask = (task: Task, index: number) => {
+    const isSubtaskVisible = visibleSubtasks[task.TaskId] || false;
+
+
     return (
       <View style={styles.taskCard}>
         <View style={styles.taskTitleContainer}>
-          <Text style={styles.taskTitle}>{task.TaskName}</Text>
-          <Image
-            source={task.Status == "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
-            style={[styles.checkboxIcon, { tintColor: task.Status == "Finished" ? '#4CAF50' : '#666666' }]}
-          />
+          <Text style={styles.taskTitle}>{index + 1}. {task.TaskName}</Text>
+
+          <View style={styles.rightSideContainer}>
+            <Image
+              source={task.Status === "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
+              style={[styles.checkboxIcon, { tintColor: task.Status === "Finished" ? '#4CAF50' : '#666666' }]}
+            />
+
+            <TouchableOpacity onPress={() => toggleSubtaskVisibility(task.TaskId)}>
+              <Image
+                source={isSubtaskVisible ? require('../assets/up-arrow.png') : require('../assets/down-arrow.png')}
+                style={[styles.subarrowIcon, { tintColor: "black" }]}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
+
+
+        {isSubtaskVisible ? (
+          task.Subtasks && task.Subtasks.length > 0 ? (
+            <View style={styles.subtaskContainer}>
+              {task.Subtasks.map((subtask, subindex) => {
+                return (
+                  <View key={subtask.SubTaskId} style={styles.subtaskItem}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.subtaskText}>
+                        {index + 1}.{subindex + 1}   {subtask.SubTaskName}
+                      </Text>
+                      <Image
+                        source={
+                          subtask.Status === 'Finished'
+                            ? require('../assets/tick.png')
+                            : require('../assets/checkbox.png')
+                        }
+                        style={[
+                          styles.statusIcon,
+                          { tintColor: subtask.Status === 'Finished' ? '#4CAF50' : '#666666' },
+                        ]}
+                      />
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontStyle: 'italic',
+                        paddingLeft: 31,
+                        paddingTop: 10,
+                        color: '#61677A',
+                      }}
+                    >
+                      {subtask.Description}
+                    </Text>
+                  </View>
+
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={{ fontStyle: "italic", fontSize: 12, paddingVertical: 10 }}>No subtasks available</Text>
+          )
+        ) : null}
+
 
         <View style={styles.taskIcons}>
           <View style={styles.iconWrapper}>
@@ -210,16 +293,18 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
             <Text style={styles.iconText}>{task.Documents} Documents</Text>
           </View>
         </View>
+
       </View>
     );
   };
+
 
   const renderTeamMembers = () => {
     const displayedMembers = projectData?.teamMembers?.slice(0, 3) || [];
     const remainingCount = (projectData?.teamMembers?.length ?? 0) - 3;
 
     return (
-      <View style={styles.teamList}>
+      <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers', { projectId }) }} style={styles.teamList}>
         {displayedMembers?.map((member, index) => (
           <View key={index} style={styles.memberCircle}>
             <Text style={styles.memberInitial}>{member?.Username.charAt(0)}</Text>
@@ -230,7 +315,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
             <Text style={styles.memberInitial}>+{remainingCount}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -255,7 +340,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
         <Text style={styles.headerText}>Project Details</Text>
 
-        <TouchableOpacity onPress={() => { navigation.navigate('AddTask',{projectId:projectId}) }} style={styles.plusButton}>
+        <TouchableOpacity onPress={() => { navigation.navigate('AddTask', { projectId: projectId }) }} style={styles.plusButton}>
           <Image
             source={require('../assets/add-icon.png')}
             style={styles.plusIcon}
@@ -294,7 +379,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
         <View style={styles.taskProgressContainer}>
           <Text style={styles.sectionTitle}>Tasks</Text>
-          {projectData.tasks?.map((task, index) => renderTask(task))}
+          {projectData.tasks?.map((task, index) => renderTask(task, index))}
         </View>
 
         <Text style={{
@@ -519,7 +604,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     elevation: 1,
     marginBottom: 1,
-},
+  },
   taskName: {
     fontSize: 28,
     fontWeight: '800',
@@ -621,6 +706,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingHorizontal: 5,
   },
+
   taskCard: {
     backgroundColor: '#FFFFFF',
     padding: 18,
@@ -635,24 +721,34 @@ const styles = StyleSheet.create({
   taskTitleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingRight: 1,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   taskTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 12,
   },
   checkboxIcon: {
     width: 22,
     height: 22,
+  },
+  rightSideContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subarrowIcon: {
+    width: 28,
+    height: 28,
+    marginLeft: 10,
   },
   taskIcons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
   },
+
+
   iconWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -685,19 +781,19 @@ const styles = StyleSheet.create({
     width: 25,
     height: 25,
     resizeMode: 'contain',
-},
-headerText: {
+  },
+  headerText: {
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
     alignSelf: 'center',
-},
-plusButton: {
+  },
+  plusButton: {
     position: 'absolute',
     right: 20,
     top: 20,
     zIndex: 10,
-},
+  },
   statValue: {
     fontSize: 17,
     fontWeight: '600',
@@ -823,12 +919,12 @@ plusButton: {
     left: 15,
     top: 20,
     zIndex: 10,
-},
-plusIcon: {
-  width: 25,
-  height: 25,
-  resizeMode: 'contain',
-},
+  },
+  plusIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
+  },
   bar: {
     width: 13,
     marginBottom: 2,
@@ -868,6 +964,41 @@ plusIcon: {
     color: '#333',
     fontWeight: '500',
   },
+
+  subtaskContainer: {
+    paddingVertical: 8,
+  },
+  subtaskItem: {
+    marginBottom: 5,
+    paddingVertical: 15,
+
+  },
+  subtaskText: {
+    fontSize: 14,
+    color: '#4A4947',
+    marginLeft: 5,
+    fontWeight: "bold",
+  },
+  subtaskIcon: {
+    width: 18,
+    height: 18,
+    marginRight: 8,
+    tintColor: '#666',
+  },
+  subtaskStatus: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+    marginLeft: 8,
+  },
+
+  statusIcon: {
+    width: 18,
+    height: 18,
+    marginLeft: 8,
+  },
+
+
 
 
 });

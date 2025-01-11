@@ -40,7 +40,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
         padding: 15,
-        elevation: 1,
         marginBottom: 1,
     },
     profilePicContainer: {

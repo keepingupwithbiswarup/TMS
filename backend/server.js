@@ -410,6 +410,17 @@ app.post('/api/createtask', async (req, res) => {
   }
 });
 
+app.get('/api/subtasks', async (req, res) => {
+  try {
+    const result = await pool.request().query('SELECT * FROM SubTask');
+    res.status(200).json(result.recordset);
+  } catch (err) {
+    console.error('Error executing query:', err.message);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
 
   
 
