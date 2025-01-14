@@ -50,6 +50,10 @@ import { Platform } from 'react-native'
 import DocumentViewPage from './screens/DocumentViewPage';
 import AddTask from './screens/AddTask';
 import TeamMembers from './screens/TeamMembers';
+import AddSubTask from './screens/AddSubTask';
+import EditTask from './screens/EditTask';
+import EditSubTask from './screens/EditSubTask';
+import EditProject from './screens/EditProject';
 
 
 
@@ -246,6 +250,10 @@ const AppNavigator = () => {
       <Stack.Screen name="DocumentViewPage" component={DocumentViewPage} options={{ headerShown: false }} />
       <Stack.Screen name="AddTask" component={AddTask} options={{ headerShown: false }} />
       <Stack.Screen name="TeamMembers" component={TeamMembers} options={{ headerShown: false }} />
+      <Stack.Screen name="AddSubTask" component={AddSubTask} options={{ headerShown: false }} />
+      <Stack.Screen name="EditTask" component={EditTask} options={{ headerShown: false }} />
+      <Stack.Screen name="EditSubTask" component={EditSubTask} options={{ headerShown: false }} />
+      <Stack.Screen name="EditProject" component={EditProject} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

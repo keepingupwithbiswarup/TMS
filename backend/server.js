@@ -421,14 +421,259 @@ app.get('/api/subtasks', async (req, res) => {
 });
 
 
+app.post('/api/createsubtask', async (req, res) => {
+  const { subTaskName, taskId, dueDate, description } = req.body;
 
-  
+  if (!subTaskName || !taskId || !dueDate || !description) {
+    return res.status(400).json({
+      error: 'All fields are required: SubTaskName, TaskId, DueDate, and Description.',
+    });
+  }
 
-  
+  const transaction = new mssql.Transaction();
 
+  try {
     
-  
-  
+    await transaction.begin();
+
+    const insertSubTaskQuery = `
+      INSERT INTO SubTask (SubTaskName, TaskId, DueDate, Description)
+      OUTPUT INSERTED.SubTaskId
+      VALUES (@SubTaskName, @TaskId, @DueDate, @Description)
+    `;
+
+    const subTaskRequest = transaction.request();
+    subTaskRequest.input('SubTaskName', subTaskName);
+    subTaskRequest.input('TaskId', taskId);
+    subTaskRequest.input('DueDate', dueDate);
+    subTaskRequest.input('Description', description);
+
+ 
+    const subTaskResult = await subTaskRequest.query(insertSubTaskQuery);
+    const subTaskId = subTaskResult.recordset[0].SubTaskId;
+
+
+    await transaction.commit();
+
+
+    res.status(201).json({
+      message: 'SubTask created successfully.',
+      subTaskId,
+    });
+  } catch (err) {
+    console.error('Error executing transaction:', err.message);
+
+    await transaction.rollback();
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.put('/api/updatetask', async (req, res) => {
+  const { taskId, taskName, description, dueDate } = req.body;
+
+  if (!taskId || !taskName || !description || !dueDate) {
+    return res.status(400).json({
+      error: 'All fields are required: TaskId, TaskName, Description, and DueDate.',
+    });
+  }
+
+  const transaction = new mssql.Transaction();
+
+  try {
+    await transaction.begin();
+
+    const updateTaskQuery = `
+      UPDATE Task
+      SET TaskName = @TaskName,
+          Description = @Description,
+          DueDate = @DueDate
+      WHERE TaskId = @TaskId
+    `;
+    const taskRequest = transaction.request();
+    taskRequest.input('TaskId', taskId);
+    taskRequest.input('TaskName', taskName);
+    taskRequest.input('Description', description);
+    taskRequest.input('DueDate', dueDate);
+
+    await taskRequest.query(updateTaskQuery);
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: 'Task updated successfully.',
+    });
+  } catch (err) {
+    console.error('Error executing transaction:', err.message);
+    await transaction.rollback();
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.put('/api/updatesubtask', async (req, res) => {
+  const { subTaskId, subTaskName, description, dueDate } = req.body;
+
+
+  if (!subTaskId || !subTaskName || !description || !dueDate) {
+    return res.status(400).json({
+      error: 'All fields are required: SubTaskId, SubTaskName, Description, and DueDate.',
+    });
+  }
+
+  const transaction = new mssql.Transaction();
+
+  try {
+
+    await transaction.begin();
+
+    const updateSubTaskQuery = `
+      UPDATE SubTask
+      SET SubTaskName = @SubTaskName,
+          Description = @Description,
+          DueDate = @DueDate
+      WHERE SubTaskId = @SubTaskId
+    `;
+    const subTaskRequest = transaction.request();
+    subTaskRequest.input('SubTaskId', subTaskId);
+    subTaskRequest.input('SubTaskName', subTaskName);
+    subTaskRequest.input('Description', description);
+    subTaskRequest.input('DueDate', dueDate);
+
+    await subTaskRequest.query(updateSubTaskQuery);
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: 'SubTask updated successfully.',
+    });
+  } catch (err) {
+    console.error('Error executing transaction:', err.message);
+
+    await transaction.rollback();
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.put('/api/updateproject', async (req, res) => {
+  const { projectId, projectName, description, dueDate } = req.body;
+
+  if (!projectId || !projectName || !description || !dueDate) {
+    return res.status(400).json({
+      error: 'All fields are required: ProjectId, ProjectName, Description, and DueDate.',
+    });
+  }
+
+  const transaction = new mssql.Transaction();
+
+  try {
+    await transaction.begin();
+
+    const updateProjectQuery = `
+      UPDATE Project
+      SET ProjectName = @ProjectName,
+          Description = @Description,
+          DueDate = @DueDate
+      WHERE ProjectId = @ProjectId
+    `;
+
+    const projectRequest = transaction.request();
+    projectRequest.input('ProjectId', projectId);
+    projectRequest.input('ProjectName', projectName);
+    projectRequest.input('Description', description);
+    projectRequest.input('DueDate', dueDate);
+
+    await projectRequest.query(updateProjectQuery);
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: 'Project updated successfully.',
+    });
+  } catch (err) {
+    console.error('Error executing transaction:', err.message);
+
+    await transaction.rollback();
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+app.delete('/api/deletetask', async (req, res) => {
+  const sql = require('mssql'); 
+  const { taskId } = req.body;
+
+  if (!taskId || typeof taskId !== 'number') {
+    console.error("Invalid TaskId received:", taskId);
+    return res.status(400).send("Task ID must be a valid number");
+  }
+
+  try {
+    const result = await pool.request()
+      .input('TaskId', sql.Int, taskId) 
+      .query('DELETE FROM Task WHERE TaskId = @TaskId');
+
+    if (result.rowsAffected[0] === 0) {
+      console.warn("Task not found for TaskId:", taskId);
+      return res.status(404).send("Task not found");
+    }
+    res.status(200).send("Task deleted successfully");
+  } catch (err) {
+    console.error("Error executing query:", err.message, err.stack);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.delete('/api/deletesubtask', async (req, res) => {
+  const sql = require('mssql'); 
+  const { subTaskId } = req.body;
+
+  if (!subTaskId || typeof subTaskId !== 'number') {
+    console.error("Invalid SubTaskId received:", subTaskId);
+    return res.status(400).send("Subtask ID must be a valid number");
+  }
+
+  try {
+    const result = await pool.request()
+      .input('SubTaskId', sql.Int, subTaskId) 
+      .query('DELETE FROM SubTask WHERE SubTaskId = @SubTaskId');
+
+    if (result.rowsAffected[0] === 0) {
+      console.warn("Subtask not found for SubTaskId:", subTaskId);
+      return res.status(404).send("Subtask not found");
+    }
+    res.status(200).send("Subtask deleted successfully");
+  } catch (err) {
+    console.error("Error executing query:", err.message, err.stack);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+
+app.delete('/api/deleteproject', async (req, res) => {
+  const sql = require('mssql'); 
+  const { projectId } = req.body;
+
+  if (!projectId || typeof projectId !== 'number') {
+    console.error("Invalid ProjectId received:", projectId);
+    return res.status(400).send("Project ID must be a valid number");
+  }
+
+  try {
+    const result = await pool.request()
+      .input('ProjectId', sql.Int, projectId) 
+      .query('DELETE FROM Project WHERE ProjectId = @ProjectId');
+
+    if (result.rowsAffected[0] === 0) {
+      console.warn("Project not found for ProjectId:", projectId);
+      return res.status(404).send("Project not found");
+    }
+    res.status(200).send("Project deleted successfully");
+  } catch (err) {
+    console.error("Error executing query:", err.message, err.stack);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+
+
+
 
 
 

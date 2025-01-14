@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform, Pressable } from 'react-native';
 import Header from '../components/Header';
 
 import { User } from '../utilities/types';
 import usePdfSource from '../utilities/usePdfSource';
+import CustomModal from '../components/CustomModal';
 
 
 
@@ -54,13 +55,21 @@ type Project = {
 
 
 
+
+
 const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => {
   const { projectId } = route.params;
   const [projectData, setProjectData] = useState<Project | null>(null);
   const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [projectModalVisible, setProjectModalVisible] = useState(false);
+  const [taskModalVisible, setTaskModalVisible] = useState(false);
+  const [subtaskModalVisible, setSubTaskModalVisible] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [source, changeSource] = usePdfSource();
   const [visibleSubtasks, setVisibleSubtasks] = useState<{ [key: number]: boolean }>({});
+  const [currTaskId, setCurrTaskId] = useState(0);
+  const [currSubTaskId, setCurrSubTaskId] = useState(0);
+
 
   const toggleSubtaskVisibility = (taskId: number) => {
     setVisibleSubtasks(prev => ({
@@ -74,6 +83,124 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     changeSource(newUri);
     navigation.navigate('DocumentViewPage', { source: { uri: newUri, cache: true } });
   };
+
+  const handleProjectDelete = () => {
+    setProjectModalVisible(true);
+  };
+  const handleTaskDelete = (taskId: number) => {
+    setTaskModalVisible(true);
+    setCurrTaskId(taskId);
+  };
+  const handleSubTaskDelete = (subTaskId:number) => {
+    setSubTaskModalVisible(true);
+    setCurrSubTaskId(subTaskId)
+  };
+
+
+  const cancelProjectModal = () => {
+    setProjectModalVisible(false);
+  };
+  const cancelTaskModal = () => {
+    setTaskModalVisible(false);
+  };
+  const cancelSubTaskModal = () => {
+    setSubTaskModalVisible(false);
+  };
+
+
+  const confirmProjectDeletion = async (projectId: number) => {
+    if (!projectId) {
+      console.error('Project ID is missing');
+      return;
+    }
+  
+    console.log('Attempting to delete Project ID:', projectId);
+  
+    try {
+      setProjectModalVisible(false);
+  
+      const response = await fetch('http://192.168.10.122:5000/api/deleteproject', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectId }),
+      });
+  
+      if (response.ok) {
+        const data = await response.text();
+        console.log('Project deleted:', data);
+      } else {
+        const errorMessage = await response.text();
+        console.error('Failed to delete project:', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+    }
+  };
+  
+  const confirmTaskDeletion = async (taskId: number) => {
+    if (!taskId) {
+      console.error('Task ID is missing');
+      return;
+    }
+  
+    console.log('Attempting to delete Task ID:', taskId);
+  
+    try {
+      setTaskModalVisible(false);
+  
+      const response = await fetch('http://192.168.10.122:5000/api/deletetask', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ taskId }),
+      });
+  
+      if (response.ok) {
+        const data = await response.text();
+        console.log('Task deleted:', data);
+      } else {
+        const errorMessage = await response.text();
+        console.error('Failed to delete task:', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+  
+  const confirmSubTaskDeletion = async (subTaskId: number) => {
+    if (!subTaskId) {
+      console.error('Subtask ID is missing');
+      return;
+    }
+  
+    console.log('Attempting to delete Subtask ID:', subTaskId);
+  
+    try {
+      setSubTaskModalVisible(false);
+  
+      const response = await fetch('http://192.168.10.122:5000/api/deletesubtask', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subTaskId }),
+      });
+  
+      if (response.ok) {
+        const data = await response.text();
+        console.log('Subtask deleted:', data);
+      } else {
+        const errorMessage = await response.text();
+        console.error('Failed to delete subtask:', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error deleting subtask:', error);
+    }
+  };
+  
 
   const [statistics, setStatistics] = useState([
     { day: 'M', onTarget: 30, tasksTarget: 20, offTarget: 10 },
@@ -127,18 +254,18 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
       const projectTeams = allTeams.filter((item: any) => item.ProjectId == projectId);
 
-      if (projectTeams.length === 0) {
-        console.error('No teams found for the project');
-        return;
-      }
+      // if (projectTeams.length === 0) {
+      //   console.error('No teams found for the project');
+      //   return;
+      // }
 
       const team = projectTeams[0];
       const teamMembers = allTeamMembers.filter((item: any) => item.TeamId == team.TeamId);
 
-      if (teamMembers.length === 0) {
-        console.error('No team members found for this team');
-        return;
-      }
+      // if (teamMembers.length === 0) {
+      //   console.error('No team members found for this team');
+      //   return;
+      // }
 
       const projectTeam = teamMembers.map((member: any) => {
         const employee = allEmployees.find((emp: any) => emp.EmployeeId == member.EmployeeId);
@@ -234,6 +361,19 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
                 style={[styles.subarrowIcon, { tintColor: "black" }]}
               />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => { navigation.navigate('EditTask', { taskId: task.TaskId }) }}>
+              <Image
+                source={require('../assets/editcard.png')}
+                style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, marginTop: 4 }]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleTaskDelete(task.TaskId)} style={styles.iconButton}>
+              <Image
+                source={require('../assets/delete-icon.png')}
+                style={[styles.icon, { tintColor: "red", height: 23, width: 23 }]}
+              />
+            </TouchableOpacity>
+
           </View>
         </View>
         <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
@@ -260,6 +400,18 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
                           { tintColor: subtask.Status === 'Finished' ? '#4CAF50' : '#666666' },
                         ]}
                       />
+                      <TouchableOpacity onPress={() => { navigation.navigate('EditSubTask', { subTaskId: subtask.SubTaskId }) }}>
+                        <Image
+                          source={require('../assets/editcard.png')}
+                          style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, height: 25, width: 25, marginTop: 4 }]}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleSubTaskDelete(subtask.SubTaskId)} style={styles.iconButton}>
+                        <Image
+                          source={require('../assets/delete-icon.png')}
+                          style={[styles.icon, { tintColor: "red", height: 21, width: 21 }]}
+                        />
+                      </TouchableOpacity>
                     </View>
                     <Text
                       style={{
@@ -276,9 +428,24 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
                 );
               })}
+              <View style={{ height: 25, borderLeftWidth: 1, borderLeftColor: "#4a6fe9", marginLeft: 11.2 }} />
+              <View style={{ flexDirection: 'row', alignItems: "center" }}>
+
+                <Image source={require("../assets/addcircle.png")} style={{ height: 23, width: 23, tintColor: "#4a6fe9" }} />
+                <Text onPress={() => { navigation.navigate('AddSubTask', { taskId: task.TaskId }) }} style={{ fontSize: 14, marginLeft: 5, paddingVertical: 10, fontWeight: "bold", color: "#4a6fe9" }}>Add Subtask</Text>
+              </View>
+
             </View>
+
           ) : (
-            <Text style={{ fontStyle: "italic", fontSize: 12, paddingVertical: 10 }}>No subtasks available</Text>
+            <View>
+              <Text style={{ fontStyle: "italic", fontSize: 12, paddingVertical: 10 }}>No subtasks available</Text>
+              <View style={{ flexDirection: 'row', alignItems: "center" }}>
+
+                <Image source={require("../assets/addcircle.png")} style={{ height: 23, width: 23, tintColor: "#4a6fe9" }} />
+                <Text onPress={() => { navigation.navigate('AddSubTask', { taskId: task.TaskId }) }} style={{ fontSize: 14, marginLeft: 5, paddingVertical: 10, fontWeight: "bold", color: "#4a6fe9" }}>Add Subtask</Text>
+              </View>
+            </View>
           )
         ) : null}
 
@@ -300,12 +467,23 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
 
   const renderTeamMembers = () => {
-    const displayedMembers = projectData?.teamMembers?.slice(0, 3) || [];
-    const remainingCount = (projectData?.teamMembers?.length ?? 0) - 3;
+    const teamMembers = projectData?.teamMembers || [];
+
+    if (teamMembers.length === 0) {
+      return <Text style={{
+        fontSize: 14,
+        color: '#777',
+        paddingVertical: 10,
+        fontStyle: "italic",
+      }}>No members assigned</Text>;
+    }
+
+    const displayedMembers = teamMembers.slice(0, 3);
+    const remainingCount = teamMembers.length - 3;
 
     return (
       <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers', { projectId }) }} style={styles.teamList}>
-        {displayedMembers?.map((member, index) => (
+        {displayedMembers.map((member, index) => (
           <View key={index} style={styles.memberCircle}>
             <Text style={styles.memberInitial}>{member?.Username.charAt(0)}</Text>
           </View>
@@ -318,6 +496,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       </TouchableOpacity>
     );
   };
+
 
   if (!projectData) {
     return (
@@ -340,13 +519,28 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
         <Text style={styles.headerText}>Project Details</Text>
 
-        <TouchableOpacity onPress={() => { navigation.navigate('AddTask', { projectId: projectId }) }} style={styles.plusButton}>
-          <Image
-            source={require('../assets/add-icon.png')}
-            style={styles.plusIcon}
-          />
-        </TouchableOpacity>
+        <View style={styles.iconContainer}>
+          <TouchableOpacity onPress={() => { navigation.navigate('AddTask', { projectId: projectId }) }} style={styles.iconButton}>
+            <Image
+              source={require('../assets/add-icon.png')}
+              style={styles.icon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { navigation.navigate('EditProject', { projectId: projectId }) }} style={styles.iconButton}>
+            <Image
+              source={require('../assets/editcard.png')}
+              style={[styles.icon, { marginTop: 4 }]}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleProjectDelete} style={styles.iconButton}>
+            <Image
+              source={require('../assets/delete-icon.png')}
+              style={[styles.icon, { tintColor: "red" }]}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
+
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <View style={styles.badgeContainer}>
@@ -531,6 +725,17 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
         <View style={{ height: 50 }} />
       </ScrollView>
+
+      <CustomModal visible={projectModalVisible} cancelModal={cancelProjectModal} confirmDeletion={() => confirmProjectDeletion(parseInt(projectId))} title='Are you sure you want to delete this project permanently?' subtitle='Deleting this project would mean deletion of the associated tasks and subtasks.' />
+      <CustomModal
+        visible={taskModalVisible}
+        cancelModal={cancelTaskModal}
+        confirmDeletion={() => confirmTaskDeletion(currTaskId)}
+        title="Are you sure you want to delete this task permanently?"
+        subtitle="Deleting this would mean deletion of the associated subtasks."
+      />
+
+      <CustomModal visible={subtaskModalVisible} cancelModal={cancelSubTaskModal} confirmDeletion={() => confirmSubTaskDeletion(currSubTaskId)} title='Are you sure you want to delete this subtask permanently?' subtitle='Deleting this would mean deletion of the associated timesheets.' />
     </View>
   );
 };
@@ -543,6 +748,14 @@ const styles = StyleSheet.create({
   iconTextContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    marginLeft: 5,
+
   },
   pdf: {
     flex: 1,
@@ -597,7 +810,7 @@ const styles = StyleSheet.create({
 
   headerContainer2: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'white',
     paddingVertical: 20,
@@ -754,8 +967,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    width: 20,
-    height: 20,
+    width: 25,
+    height: 25,
     marginRight: 5,
   },
   iconText: {
@@ -786,7 +999,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    alignSelf: 'center',
+    flex: 1,
+    marginLeft: 105,
   },
   plusButton: {
     position: 'absolute',
@@ -970,7 +1184,7 @@ const styles = StyleSheet.create({
   },
   subtaskItem: {
     marginBottom: 5,
-    paddingVertical: 15,
+    paddingTop: 25,
 
   },
   subtaskText: {
@@ -997,6 +1211,8 @@ const styles = StyleSheet.create({
     height: 18,
     marginLeft: 8,
   },
+
+
 
 
 
