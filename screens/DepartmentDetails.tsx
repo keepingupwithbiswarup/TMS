@@ -13,6 +13,7 @@ import { BarChart, LineChart } from 'react-native-chart-kit';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import Header from '../components/Header';
+import IpRoute from '../utilities/iproute';
 
 type Task = {
   time: string;
@@ -51,7 +52,7 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
       const fetchDepartments = async () => {
         try {
           setLoading(true);
-          const response = await fetch('http://192.168.10.122:5000/api/departments');
+          const response = await fetch(`http://${IpRoute}/api/departments`);
           const data = await response.json();
 
 

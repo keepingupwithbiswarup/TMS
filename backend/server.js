@@ -14,7 +14,7 @@ app.use(cors());
 const dbConfig = {
   user: 'saikatdam',
   password: 'dam@123',
-  server: '192.168.10.113',
+  server: '125.22.105.182',
   port: 1433,
   database: 'TMSIntern',
   options: {
@@ -670,6 +670,41 @@ app.delete('/api/deleteproject', async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+app.delete('/api/deleteteammembers', async (req, res) => {
+  const sql = require('mssql');
+  const { projectId, employeeIds } = req.body;
+
+  // Validate input
+  if (!projectId || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+    console.error("Invalid inputs received:", { projectId, employeeIds });
+    return res.status(400).send("ProjectId and EmployeeIds must be valid");
+  }
+
+  try {
+    // Loop through selected employeeIds and delete from TeamMembers
+    for (let employeeId of employeeIds) {
+      const result = await pool.request()
+        .input('EmployeeId', sql.Int, employeeId)
+        .input('ProjectId', sql.Int, projectId)
+        .query(`
+          DELETE FROM TeamMembers 
+          WHERE EmployeeId = @EmployeeId 
+          AND TeamId = (SELECT TeamId FROM Team WHERE ProjectId = @ProjectId)
+        `);
+
+      if (result.rowsAffected[0] === 0) {
+        console.warn("No TeamMember found for EmployeeId:", employeeId, "in ProjectId:", projectId);
+        continue;
+      }
+    }
+
+    res.status(200).send("Team Members removed successfully");
+  } catch (err) {
+    console.error("Error executing query:", err.message, err.stack);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 
 
 

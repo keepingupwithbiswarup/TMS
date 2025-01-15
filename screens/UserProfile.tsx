@@ -14,6 +14,7 @@ import {
   import ProfileOptionCard from '../components/ProfileOptionCard';
   import { useFocusEffect } from '@react-navigation/native';
   import { User } from '../utilities/types';
+import IpRoute from '../utilities/iproute';
   
   const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => {
     const { userId } = route.params; 
@@ -24,7 +25,7 @@ import {
         setLoading(true);
         try {
     
-          const response = await fetch(`http://192.168.10.122:5000/api/employees`);
+          const response = await fetch(`http://${IpRoute}/api/employees`);
           if (response.ok) {
             const users = await response.json(); 
         

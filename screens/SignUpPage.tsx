@@ -5,8 +5,9 @@ import { TextInput } from 'react-native-gesture-handler';
 import CheckBox from 'react-native-check-box';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import IpRoute from '../utilities/iproute';
 
-const API_BASE_URL = 'http://192.168.10.113:2002';
+const API_BASE_URL = 'http://125.22.105.182:2002';
 
 export async function registerUser(userName: string, email: string, password: string): Promise<any> {
   try {
@@ -61,7 +62,7 @@ export default function SignUpPage({ navigation }: { navigation: any }) {
       console.log('Registration Successful:', result);
 
 
-      const employeeResponse = await axios.get(`http://192.168.10.122:5000/api/employees`, {
+      const employeeResponse = await axios.get(`http://${IpRoute}/api/employees`, {
         params: { Username: userName },
       });
 

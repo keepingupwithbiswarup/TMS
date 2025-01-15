@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import { format } from 'date-fns';
 import { User } from '../utilities/types';
 import { useFocusEffect } from '@react-navigation/native';
+import IpRoute from '../utilities/iproute';
 
 interface Department {
     DeptId: number;
@@ -34,7 +35,7 @@ const AddProjectScreen = ({route}:{route:any}) => {
         try {
           setLoading(true);
           const departmentResponse = await fetch(
-            'http://192.168.10.122:5000/api/departments'
+            `http://${IpRoute}/api/departments`
           );
           const departmentData = await departmentResponse.json();
           const matchedDepartment = departmentData.find(
@@ -49,7 +50,7 @@ const AddProjectScreen = ({route}:{route:any}) => {
           }
     
           const employeesResponse = await fetch(
-            'http://192.168.10.122:5000/api/employees'
+            `http://${IpRoute}/api/employees`
           );
           const employeesData = await employeesResponse.json();
     
@@ -99,7 +100,7 @@ const AddProjectScreen = ({route}:{route:any}) => {
     
         try {
             for (const employee of selectedEmployees) {
-                const response = await fetch('http://192.168.10.122:5000/api/createproject', {
+                const response = await fetch(`http://${IpRoute}/api/createproject`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

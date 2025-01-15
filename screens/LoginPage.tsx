@@ -2,8 +2,9 @@ import { ActivityIndicator, Alert, Image, Modal, SafeAreaView, ScrollView, Statu
 import React, { useState } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import IpRoute from '../utilities/iproute';
 
-const API_BASE_URL = 'http://192.168.10.113:2002';
+const API_BASE_URL = 'http://125.22.105.182:2002';
 
 export async function loginUser(email: string, password: string): Promise<any> {
   try {
@@ -13,15 +14,11 @@ export async function loginUser(email: string, password: string): Promise<any> {
     });
     return response.data;
   } catch (error: any) {
-    // Handle network errors and other errors
     if (error.response) {
-      // The server responded with a status code that falls out of the range of 2xx
       throw new Error(error.response.data.message || 'Invalid credentials');
     } else if (error.request) {
-      // The request was made but no response was received
       throw new Error('Network error. Please check your internet connection.');
     } else {
-      // Something happened in setting up the request
       throw new Error('An unexpected error occurred. Please try again.');
     }
   }
@@ -50,7 +47,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
       const result = await loginUser(email, password);
       console.log('Login Successful:', result);
 
-      const employeeResponse = await axios.get(`http://192.168.10.122:5000/api/employees`, {
+      const employeeResponse = await axios.get(`http://${IpRoute}/api/employees`, {
         params: { Email: email },
       });
 

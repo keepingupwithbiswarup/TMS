@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '../components/Header'
 import BottomButton from '../components/BottomButton'
 import { useFocusEffect } from '@react-navigation/native'
+import IpRoute from '../utilities/iproute'
 
 const UserPhone = ({ route, navigation }: { route: any; navigation: any }) => {
   const { employeeId } = route.params; 
@@ -16,7 +17,7 @@ const UserPhone = ({ route, navigation }: { route: any; navigation: any }) => {
     setLoading(true);
     try {
   
-      const response = await fetch(`http://192.168.10.122:5000/api/employees`);
+      const response = await fetch(`http://${IpRoute}/api/employees`);
       if (response.ok) {
         const users = await response.json();
         const currentUser = users.find((user: any) => user.EmployeeId === employeeId);
@@ -59,7 +60,7 @@ const UserPhone = ({ route, navigation }: { route: any; navigation: any }) => {
   const updatePhoneNumber = async () => {
     if (phone !== initialPhone && phone.length === 10) {
       try {
-        const response = await fetch(`http://192.168.10.122:5000/api/updatephone/${employeeId}`, {
+        const response = await fetch(`http://${IpRoute}/api/updatephone/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

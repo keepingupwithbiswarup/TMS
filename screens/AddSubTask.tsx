@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, Platform } 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import Header from '../components/Header';
+import IpRoute from '../utilities/iproute';
 
 const AddSubTask = ({ route }: { route: any }) => {
     const { taskId } = route.params;
@@ -35,7 +36,7 @@ const AddSubTask = ({ route }: { route: any }) => {
         };
 
         try {
-            const response = await fetch('http://192.168.10.122:5000/api/createsubtask', {
+            const response = await fetch(`http://${IpRoute}/api/createsubtask`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

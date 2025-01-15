@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import BottomButton from '../components/BottomButton';
 import { useFocusEffect } from '@react-navigation/native';
 import DropDownPicker from 'react-native-dropdown-picker';
+import IpRoute from '../utilities/iproute';
 
 const UserRole = ({ route, navigation }: { route: any; navigation: any }) => {
   const { employeeId } = route.params;
@@ -25,7 +26,7 @@ const UserRole = ({ route, navigation }: { route: any; navigation: any }) => {
   const checkUser = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://192.168.10.122:5000/api/employees`);
+      const response = await fetch(`http://${IpRoute}/api/employees`);
       if (response.ok) {
         const users = await response.json();
         const currentUser = users.find((user: any) => user.EmployeeId === employeeId);
@@ -67,7 +68,7 @@ const UserRole = ({ route, navigation }: { route: any; navigation: any }) => {
   const updateRole = async () => {
     if (role !== initialRole && role.length > 0) {
       try {
-        const response = await fetch(`http://192.168.10.122:5000/api/updaterole/${employeeId}`, {
+        const response = await fetch(`http://${IpRoute}/api/updaterole/${employeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

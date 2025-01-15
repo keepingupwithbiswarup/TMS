@@ -1,16 +1,18 @@
-import {
-    StyleSheet,
-    Text,
-    View,
-    FlatList,
-    ActivityIndicator,
-    TouchableOpacity,
-    Image,
-} from 'react-native';
 import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import MemberCard from '../components/MemberCard';
+import {
+    View,
+    Text,
+    FlatList,
+    TouchableOpacity,
+    ActivityIndicator,
+    Image,
+    StyleSheet,
+    Button,
+} from 'react-native';
 import { User } from '../utilities/types';
+import CustomModal from '../components/CustomModal';
+import TeamMemberCard from '../components/TeamMemberCard';
+import IpRoute from '../utilities/iproute';
 
 const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => {
     const { projectId } = route.params;
@@ -19,7 +21,7 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
     const [error, setError] = useState<string | null>(null);
     const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
-
+    const [isModalVisible, setIsModalVisible] = useState(false);
     const fetchProjectTeamMembers = async () => {
         try {
             setLoading(true);
@@ -27,9 +29,9 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
 
             const [teamsResponse, teamMembersResponse, employeesResponse] =
                 await Promise.all([
-                    fetch('http://192.168.10.122:5000/api/teams'),
-                    fetch('http://192.168.10.122:5000/api/teammembers'),
-                    fetch('http://192.168.10.122:5000/api/employees'),
+                    fetch(`http://${IpRoute}/api/teams`),
+                    fetch(`http://${IpRoute}/api/teammembers`),
+                    fetch(`http://${IpRoute}/api/employees`),
                 ]);
 
             const [allTeams, allTeamMembers, allEmployees] = await Promise.all([
@@ -87,12 +89,13 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
         fetchProjectTeamMembers();
     }, [projectId]);
 
+    useEffect(() => {
+        fetchProjectTeamMembers();
+    }, [projectId]);
+
     const toggleSelection = (user: User) => {
         setSelectedMembers((prev) => {
-            const isSelected = prev.some(
-                (selected) => selected.EmployeeId === user.EmployeeId
-            );
-
+            const isSelected = prev.some((selected) => selected.EmployeeId === user.EmployeeId);
             const updatedSelection = isSelected
                 ? prev.filter((selected) => selected.EmployeeId !== user.EmployeeId)
                 : [...prev, user];
@@ -103,6 +106,37 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
 
             return updatedSelection;
         });
+    };
+
+    const handleDeleteMembers = async () => {
+        try {
+            const employeeIds = selectedMembers.map((member) => member.EmployeeId);
+            const response = await fetch(`http://${IpRoute}/api/deleteteammembers`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    projectId,
+                    employeeIds,
+                }),
+            });
+
+            if (response.ok) {
+
+                setTeamMembers((prev) =>
+                    prev.filter((member) => !employeeIds.includes(member.EmployeeId))
+                );
+                setSelectedMembers([]);
+                setIsSelectionMode(false);
+                setIsModalVisible(false);
+            } else {
+                setError('Failed to delete team members');
+            }
+        } catch (error) {
+            console.error('Error deleting members:', error);
+            setError('Error deleting team members');
+        }
     };
 
     return (
@@ -119,28 +153,25 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                         }
                     }}
                 >
-                    <Image
-                        source={
-                            isSelectionMode
-                                ? require('../assets/cancel.png')
-                                : require('../assets/back-arrow.png')
-                        }
-                        style={styles.backIcon}
-                    />
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Image
+                            source={
+                                isSelectionMode
+                                    ? require('../assets/cancel.png')
+                                    : require('../assets/back2.png')
+                            }
+                            style={styles.backIcon}
+                        />
+                        <Text style={{ color: "grey", paddingLeft: 10, }}>Project Details</Text>
+                    </View>
                 </TouchableOpacity>
                 <Text style={isSelectionMode ? [styles.label, { fontSize: 17 }] : styles.label}>
-                    {isSelectionMode
-                        ? `${selectedMembers.length} Selected`
-                        : 'Team Members'}
+                    {isSelectionMode ? `${selectedMembers.length} Selected` : ''}
                 </Text>
 
                 {isSelectionMode && (
                     <TouchableOpacity
-                        onPress={() => {
-
-                            setSelectedMembers([]);
-                            setIsSelectionMode(false);
-                        }}
+                        onPress={() => setIsModalVisible(true)}
                         style={styles.deleteButton}
                     >
                         <Image
@@ -149,6 +180,16 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                         />
                     </TouchableOpacity>
                 )}
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center',marginHorizontal:21 }}>
+                <Text style={styles.label}>
+                    Team
+                </Text>
+                <TouchableOpacity onPress={() => { }}>
+                    <View style={{backgroundColor:"blue",padding:10,borderRadius:30,paddingHorizontal:25}}>
+                    <Text style={styles.inviteText} >Invite Members</Text>
+                    </View>
+                </TouchableOpacity>
             </View>
 
 
@@ -159,26 +200,39 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
             ) : (
                 <FlatList
                     data={teamMembers}
-                    keyExtractor={(item) => item.EmployeeId.toString()}
+                    keyExtractor={(item) => item.EmployeeId?.toString() || Math.random().toString()}
                     renderItem={({ item }) => (
-                        <MemberCard
+                        <TeamMemberCard
                             name={item.Username}
-                            department={item.Department || 'No Department'}
+                            email={item.Email}
+                            status='Enabled'
+                            lastLogin='Yesterday'
                             role={item.Role}
-                            onPress={() =>
-                                isSelectionMode ? toggleSelection(item) : {}
-                            }
+                            onPress={() => {
+                                if (isSelectionMode) {
+                                    toggleSelection(item);
+                                }
+                            }}
                             onLongPress={() => {
                                 setIsSelectionMode(true);
                                 toggleSelection(item);
                             }}
-                            isSelected={selectedMembers.some(
+                            isSelection={selectedMembers.some(
                                 (selected) => selected.EmployeeId === item.EmployeeId
                             )}
                         />
                     )}
                 />
+
             )}
+
+            <CustomModal
+                visible={isModalVisible}
+                cancelModal={() => setIsModalVisible(false)}
+                confirmDeletion={handleDeleteMembers}
+                title="Confirm Deletion"
+                subtitle={`Are you sure you want to delete ${selectedMembers.length} team member(s)?`}
+            />
         </View>
     );
 };
@@ -195,19 +249,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 25,
-        paddingVertical: 30,
+        paddingTop: 30,
     },
     backButton: {
         marginRight: 10,
     },
     backIcon: {
-        width: 25,
-        height: 25,
+        width: 20,
+        height: 20,
         resizeMode: 'contain',
     },
     label: {
-        fontSize: 25,
+        fontSize: 35,
         fontWeight: 'bold',
+        paddingVertical: 10,
     },
     error: {
         color: 'red',
@@ -223,5 +278,11 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         tintColor: "red",
     },
+
+    inviteText: {
+        color: 'white',  
+        fontSize: 14,
+        fontWeight: 'bold',
+    }
 
 });

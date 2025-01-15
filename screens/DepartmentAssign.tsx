@@ -16,6 +16,7 @@ import {
 import { User } from '../utilities/types';
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
+import IpRoute from '../utilities/iproute';
 
 
 
@@ -34,7 +35,7 @@ const DepartmentAssign = ({ navigation,route }: { navigation: any,route:any }) =
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.122:5000/api/employees');
+            const response = await axios.get(`http://${IpRoute}/api/employees`);
             const filteredUsers = response.data.filter(
                 (user: User) => user.Department === null || user.Department === ''
             );
@@ -134,7 +135,7 @@ const DepartmentAssign = ({ navigation,route }: { navigation: any,route:any }) =
     
                 try {
                     const response = await fetch(
-                        `http://192.168.10.122:5000/api/assigndepartment/${employeeId}`,
+                        `http://${IpRoute}/api/assigndepartment/${employeeId}`,
                         {
                             method: 'PUT',
                             headers: {

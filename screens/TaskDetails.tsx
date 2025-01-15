@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import { User } from '../utilities/types';
 import usePdfSource from '../utilities/usePdfSource';
 import CustomModal from '../components/CustomModal';
+import IpRoute from '../utilities/iproute';
 
 
 
@@ -119,7 +120,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     try {
       setProjectModalVisible(false);
   
-      const response = await fetch('http://192.168.10.122:5000/api/deleteproject', {
+      const response = await fetch(`http://${IpRoute}/api/deleteproject`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +151,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     try {
       setTaskModalVisible(false);
   
-      const response = await fetch('http://192.168.10.122:5000/api/deletetask', {
+      const response = await fetch(`http://${IpRoute}/api/deletetask`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     try {
       setSubTaskModalVisible(false);
   
-      const response = await fetch('http://192.168.10.122:5000/api/deletesubtask', {
+      const response = await fetch(`http://${IpRoute}/api/deletesubtask`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -227,22 +228,22 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
   const fetchProjectData = async () => {
     try {
-      const response = await fetch('http://192.168.10.122:5000/api/projects');
+      const response = await fetch(`http://${IpRoute}/api/projects`);
       const data = await response.json();
 
-      const taskResponse = await fetch('http://192.168.10.122:5000/api/tasks');
+      const taskResponse = await fetch(`http://${IpRoute}/api/tasks`);
       const allTasks = await taskResponse.json();
 
-      const subtaskResponse = await fetch('http://192.168.10.122:5000/api/subtasks');
+      const subtaskResponse = await fetch(`http://${IpRoute}/api/subtasks`);
       const allSubtasks = await subtaskResponse.json();
 
-      const teamResponse = await fetch('http://192.168.10.122:5000/api/teams');
+      const teamResponse = await fetch(`http://${IpRoute}/api/teams`);
       const allTeams = await teamResponse.json();
 
-      const teamMemberResponse = await fetch('http://192.168.10.122:5000/api/teammembers');
+      const teamMemberResponse = await fetch(`http://${IpRoute}/api/teammembers`);
       const allTeamMembers = await teamMemberResponse.json();
 
-      const employeesResponse = await fetch('http://192.168.10.122:5000/api/employees');
+      const employeesResponse = await fetch(`http://${IpRoute}/api/employees`);
       const allEmployees = await employeesResponse.json();
 
       const project = data.find((item: any) => item.ProjectId == projectId);
@@ -346,37 +347,38 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
     return (
       <View style={styles.taskCard}>
-        <View style={styles.taskTitleContainer}>
-          <Text style={styles.taskTitle}>{index + 1}. {task.TaskName}</Text>
+  <View style={styles.taskTitleContainer}>
+    <View style={styles.rightSideContainer}>
+      <Image
+        source={task.Status === "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
+        style={[styles.checkboxIcon, { tintColor: task.Status === "Finished" ? '#4CAF50' : '#666666' }]}
+      />
 
-          <View style={styles.rightSideContainer}>
-            <Image
-              source={task.Status === "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
-              style={[styles.checkboxIcon, { tintColor: task.Status === "Finished" ? '#4CAF50' : '#666666' }]}
-            />
+      <TouchableOpacity onPress={() => toggleSubtaskVisibility(task.TaskId)}>
+        <Image
+          source={isSubtaskVisible ? require('../assets/up-arrow.png') : require('../assets/down-arrow.png')}
+          style={[styles.subarrowIcon, { tintColor: "black" }]}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => { navigation.navigate('EditTask', { taskId: task.TaskId }) }}>
+        <Image
+          source={require('../assets/editcard.png')}
+          style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, marginTop: 4 }]}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleTaskDelete(task.TaskId)} style={styles.iconButton}>
+        <Image
+          source={require('../assets/delete-icon.png')}
+          style={[styles.icon, { tintColor: "red", height: 23, width: 23 }]}
+        />
+      </TouchableOpacity>
+    </View>
 
-            <TouchableOpacity onPress={() => toggleSubtaskVisibility(task.TaskId)}>
-              <Image
-                source={isSubtaskVisible ? require('../assets/up-arrow.png') : require('../assets/down-arrow.png')}
-                style={[styles.subarrowIcon, { tintColor: "black" }]}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { navigation.navigate('EditTask', { taskId: task.TaskId }) }}>
-              <Image
-                source={require('../assets/editcard.png')}
-                style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, marginTop: 4 }]}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleTaskDelete(task.TaskId)} style={styles.iconButton}>
-              <Image
-                source={require('../assets/delete-icon.png')}
-                style={[styles.icon, { tintColor: "red", height: 23, width: 23 }]}
-              />
-            </TouchableOpacity>
+    <Text style={styles.taskTitle}>{index + 1}. {task.TaskName}</Text>
+  </View>
+  
+  <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
 
-          </View>
-        </View>
-        <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
 
 
         {isSubtaskVisible ? (
@@ -482,7 +484,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     const remainingCount = teamMembers.length - 3;
 
     return (
-      <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers', { projectId }) }} style={styles.teamList}>
+      <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers',{projectId}) }} style={styles.teamList}>
         {displayedMembers.map((member, index) => (
           <View key={index} style={styles.memberCircle}>
             <Text style={styles.memberInitial}>{member?.Username.charAt(0)}</Text>
@@ -936,24 +938,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    position: 'relative',
   },
   taskTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#333333',
+    marginTop: 40,
   },
   checkboxIcon: {
     width: 22,
     height: 22,
   },
   rightSideContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   subarrowIcon: {
     width: 28,
     height: 28,
-    marginLeft: 10,
+    marginLeft: 7,
   },
   taskIcons: {
     flexDirection: 'row',
@@ -969,7 +977,6 @@ const styles = StyleSheet.create({
   icon: {
     width: 25,
     height: 25,
-    marginRight: 5,
   },
   iconText: {
     fontSize: 14,

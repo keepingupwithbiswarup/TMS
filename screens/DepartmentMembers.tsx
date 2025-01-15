@@ -13,6 +13,7 @@ import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { User } from '../utilities/types';
 import MemberCard from '../components/MemberCard';
+import IpRoute from '../utilities/iproute';
 
 interface DepartmentDetailsProps {
   department: any;
@@ -43,7 +44,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
     try {
       setLoading(true);
       const departmentResponse = await fetch(
-        'http://192.168.10.122:5000/api/departments'
+        `http://${IpRoute}/api/departments`
       );
       const departmentData = await departmentResponse.json();
       const matchedDepartment = departmentData.find(
@@ -58,7 +59,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
       }
 
       const employeesResponse = await fetch(
-        'http://192.168.10.122:5000/api/employees'
+        `http://${IpRoute}/api/employees`
       );
       const employeesData = await employeesResponse.json();
 
@@ -116,7 +117,7 @@ const DepartmentMembers: React.FC<DepartmentDetailsProps> = ({ department, navig
   
       const deletionPromises = selectedUsers.map(async (user) => {
         const response = await fetch(
-          `http://192.168.10.122:5000/api/removedepartment/${user.EmployeeId}`,
+          `http://${IpRoute}/api/removedepartment/${user.EmployeeId}`,
           { method: 'DELETE' }
         );
   

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, TextInput, ActivityIndicator } from 'react-native';
 import * as Progress from 'react-native-progress';
 import Header from '../components/Header';
+import IpRoute from '../utilities/iproute';
 
 const projectIcon = require('../assets/project-icon.png');
 const commentIcon = require('../assets/settings.png');
@@ -28,7 +29,7 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch('http://192.168.10.122:5000/api/projects');
+                const response = await fetch(`http://${IpRoute}/api/projects`);
                 const data = await response.json();
                 const filteredData = data.filter((project: any) => project.DeptId === department);
 

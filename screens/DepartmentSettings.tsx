@@ -2,6 +2,7 @@ import { ActivityIndicator, Alert, Image, SafeAreaView, StatusBar, StyleSheet, T
 import React, { useState } from 'react'
 import DropDownPicker from 'react-native-dropdown-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import IpRoute from '../utilities/iproute';
 
 interface DepartmentDetailsProps {
     department: any;
@@ -35,7 +36,7 @@ const DepartmentSetings: React.FC<DepartmentDetailsProps> = ({ department, navig
             const fetchDepartments = async () => {
                 try {
                     setLoading(true);
-                    const response = await fetch('http://192.168.10.122:5000/api/departments');
+                    const response = await fetch(`http://${IpRoute}/api/departments`);
                     const data = await response.json();
 
 
@@ -89,7 +90,7 @@ const DepartmentSetings: React.FC<DepartmentDetailsProps> = ({ department, navig
         }
 
         try {
-            const response = await fetch(`http://192.168.10.137:5000/api/updatedepartment/${department}`, {
+            const response = await fetch(`http://${IpRoute}/api/updatedepartment/${department}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

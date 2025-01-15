@@ -5,6 +5,7 @@ import MemberCard from '../components/MemberCard';
 import axios from 'axios'; 
 import { User } from '../utilities/types';
 import { useFocusEffect } from '@react-navigation/native';
+import IpRoute from '../utilities/iproute';
 
 const People = ({ navigation }: { navigation: any }) => {
     const [employees, setEmployees] = useState<User[]>([]);
@@ -15,7 +16,9 @@ const People = ({ navigation }: { navigation: any }) => {
     const fetchEmployees = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.122:5000/api/employees');
+            const response = await axios.get(`http://${IpRoute}/api/employees`);
+
+
             setEmployees(response.data);
         } catch (error) {
             console.error('Error fetching employees:', error);

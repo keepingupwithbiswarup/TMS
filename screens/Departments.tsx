@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import CreateDepartmentPage from './CreateDepartmentPage';
+import IpRoute from '../utilities/iproute';
 
 interface DepartmentCardProps {
     dept: Department;  
@@ -39,7 +40,7 @@ const Departments = ({ navigation }: { navigation: any }) => {
     const fetchDepartments = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://192.168.10.122:5000/api/departments');
+            const response = await axios.get(`http://${IpRoute}/api/departments`);
             setDepartments(response.data);
         } catch (error) {
             console.error('Error fetching departments:', error);

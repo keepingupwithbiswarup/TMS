@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, Platform, A
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import Header from '../components/Header';
+import IpRoute from '../utilities/iproute';
 
 const EditTask = ({ route }: { route: any }) => {
     const { taskId } = route.params;
@@ -17,7 +18,7 @@ const EditTask = ({ route }: { route: any }) => {
     useEffect(() => {
         const fetchTaskDetails = async () => {
             try {
-                const response = await fetch('http://192.168.10.122:5000/api/tasks'); 
+                const response = await fetch(`http://${IpRoute}/api/tasks`); 
                 const tasks = await response.json();
     
                 if (response.ok) {
@@ -69,7 +70,7 @@ const EditTask = ({ route }: { route: any }) => {
         };
 
         try {
-            const response = await fetch('http://192.168.10.122:5000/api/updatetask', {
+            const response = await fetch(`http://${IpRoute}/api/updatetask`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

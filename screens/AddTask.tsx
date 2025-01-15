@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import Header from '../components/Header';
 import { User } from '../utilities/types';
+import IpRoute from '../utilities/iproute';
 
 interface Department {
     DeptId: number;
@@ -44,7 +45,7 @@ const AddTask = ({ route }: { route: any }) => {
         };
 
         try {
-            const response = await fetch('http://192.168.10.122:5000/api/createtask', {
+            const response = await fetch(`http://${IpRoute}/api/createtask`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

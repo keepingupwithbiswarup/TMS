@@ -2,6 +2,7 @@ import { Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'reac
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import CheckBox from 'react-native-check-box';
+import IpRoute from '../utilities/iproute';
 
 const ChooseGoalPage = ({ navigation,route }: { navigation: any,route:any }) => {
     const { deptName, deptSize, deptType } = route.params;
@@ -26,7 +27,7 @@ const ChooseGoalPage = ({ navigation,route }: { navigation: any,route:any }) => 
         };
 
         try {
-            const response = await fetch('http://192.168.10.122:5000/api/createdepartment', {
+            const response = await fetch(`http://${IpRoute}/api/createdepartment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

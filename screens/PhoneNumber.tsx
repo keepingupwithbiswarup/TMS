@@ -7,6 +7,7 @@ import BottomButton from '../components/BottomButton'
 import { useFocusEffect } from '@react-navigation/native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { User } from '../utilities/types'
+import IpRoute from '../utilities/iproute'
 
 const PhoneNumber = ({ navigation }: { navigation: any }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -60,7 +61,7 @@ const PhoneNumber = ({ navigation }: { navigation: any }) => {
   const updatePhoneNumber = async () => {
     if (currentUser && phone !== initialPhone && phone.length === 10) {
       try {
-        const response = await fetch(`http://192.168.10.122:5000/api/updatephone/${currentUser.EmployeeId}`, {
+        const response = await fetch(`http://${IpRoute}/api/updatephone/${currentUser.EmployeeId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
