@@ -8,59 +8,69 @@ import {
     Image,
     StyleSheet,
     Button,
+    Alert,
 } from 'react-native';
 import { User } from '../utilities/types';
 import CustomModal from '../components/CustomModal';
 import TeamMemberCard from '../components/TeamMemberCard';
 import IpRoute from '../utilities/iproute';
+import AddMembersModal from '../components/AddMembersModal';
 
 const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => {
     const { projectId } = route.params;
     const [teamMembers, setTeamMembers] = useState<User[]>([]);
+    const [otherMembers, setOtherMembers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedMembers, setSelectedMembers] = useState<User[]>([]);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
+
+    const [teamId,setTeamId] = useState(0);
+
+    const [isAddMemberModalVisible, setIsAddMemberModalVisible] = useState(false);
+
     const fetchProjectTeamMembers = async () => {
         try {
             setLoading(true);
             setError(null);
-
+    
             const [teamsResponse, teamMembersResponse, employeesResponse] =
                 await Promise.all([
                     fetch(`http://${IpRoute}/api/teams`),
                     fetch(`http://${IpRoute}/api/teammembers`),
                     fetch(`http://${IpRoute}/api/employees`),
                 ]);
-
+    
             const [allTeams, allTeamMembers, allEmployees] = await Promise.all([
                 teamsResponse.json(),
                 teamMembersResponse.json(),
                 employeesResponse.json(),
             ]);
-
+    
             const projectTeams = allTeams.filter(
                 (team: any) => team.ProjectId == projectId
             );
-
+    
             if (projectTeams.length === 0) {
                 setError('No teams found for the project');
                 setLoading(false);
                 return;
             }
-
+    
             const teamIds = projectTeams.map((team: any) => team.TeamId);
+            setTeamId(teamIds[0]);
+    
             const projectTeamMembers = allTeamMembers.filter((member: any) =>
                 teamIds.includes(member.TeamId)
             );
-
+    
             if (projectTeamMembers.length === 0) {
                 setError('No team members found for the project');
                 setLoading(false);
                 return;
             }
-
+    
             const projectEmployees = projectTeamMembers
                 .map((member: any) => {
                     const employee = allEmployees.find(
@@ -69,14 +79,26 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                     return employee || null;
                 })
                 .filter((employee: any) => employee !== null);
-
+    
             if (projectEmployees.length === 0) {
                 setError('No employees found for the project team members');
                 setLoading(false);
                 return;
             }
-
+    
             setTeamMembers(projectEmployees);
+    
+            const projectEmployeeIds = projectEmployees.map(
+                (employee: any) => employee.EmployeeId
+            );
+            const otherEmployees = allEmployees.filter(
+                (employee: any) => !projectEmployeeIds.includes(employee.EmployeeId)
+            );
+    
+            setOtherMembers(otherEmployees);
+
+            console.log(otherMembers.length);
+    
         } catch (error) {
             console.error('Error fetching team members:', error);
             setError('Failed to load team members');
@@ -84,6 +106,7 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
             setLoading(false);
         }
     };
+    
 
     useEffect(() => {
         fetchProjectTeamMembers();
@@ -139,6 +162,42 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
         }
     };
 
+    const handleInviteMembers = async (newMembers: User[]) => {
+        const employeeIds = newMembers.map((member) => member.EmployeeId);
+    
+        if (employeeIds.length === 0) {
+            console.warn("No members selected to invite.");
+            return;
+        }
+    
+        try {
+            const response = await fetch(`http://${IpRoute}/api/addteammembers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    teamId: teamId,
+                    employeeIds,
+                }),
+            });
+    
+            if (response.ok) {
+                const updatedTeamMembers = [...teamMembers, ...newMembers];
+                setTeamMembers(updatedTeamMembers);
+                setIsAddMemberModalVisible(false);
+            } else {
+                const errorData = await response.json();
+                console.error("Failed to invite members:", errorData);
+                Alert.alert("Error", "Failed to invite members. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error inviting members:", error);
+            Alert.alert("Error", "An unexpected error occurred while inviting members.");
+        }
+    };
+    
+
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
@@ -162,10 +221,10 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                             }
                             style={styles.backIcon}
                         />
-                        <Text style={{ color: "grey", paddingLeft: 10, }}>Project Details</Text>
+                        {isSelectionMode ? <></> : <Text style={{ color: "grey", paddingLeft: 10, }}>Project Details</Text>}
                     </View>
                 </TouchableOpacity>
-                <Text style={isSelectionMode ? [styles.label, { fontSize: 17 }] : styles.label}>
+                <Text style={isSelectionMode ? [styles.label, { fontSize: 14, fontWeight: "100" }] : styles.label}>
                     {isSelectionMode ? `${selectedMembers.length} Selected` : ''}
                 </Text>
 
@@ -181,16 +240,19 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                     </TouchableOpacity>
                 )}
             </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center',marginHorizontal:21 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center', marginHorizontal: 21 }}>
                 <Text style={styles.label}>
                     Team
                 </Text>
-                <TouchableOpacity onPress={() => { }}>
-                    <View style={{backgroundColor:"blue",padding:10,borderRadius:30,paddingHorizontal:25}}>
-                    <Text style={styles.inviteText} >Invite Members</Text>
+                <TouchableOpacity onPress={() => { setIsAddMemberModalVisible(true) }}>
+                    <View style={{ backgroundColor: "#004225", padding: 10, borderRadius: 30, paddingHorizontal: 25 }}>
+                        <Text style={styles.inviteText} >Invite Members</Text>
                     </View>
                 </TouchableOpacity>
+
             </View>
+            <View style={{ height: 20 }} />
+
 
 
             {loading ? (
@@ -233,6 +295,14 @@ const TeamMembers = ({ route, navigation }: { route: any; navigation: any }) => 
                 title="Confirm Deletion"
                 subtitle={`Are you sure you want to delete ${selectedMembers.length} team member(s)?`}
             />
+
+            <AddMembersModal
+            visible={isAddMemberModalVisible}
+            onClose={() => setIsAddMemberModalVisible(false)}
+            membersList={otherMembers}
+            onAddMember={handleInviteMembers}
+            teamId={teamId}
+            />
         </View>
     );
 };
@@ -249,7 +319,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 25,
-        paddingTop: 30,
+        height: 80,
     },
     backButton: {
         marginRight: 10,
@@ -260,9 +330,11 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
     },
     label: {
-        fontSize: 35,
+        fontSize: 30,
         fontWeight: 'bold',
         paddingVertical: 10,
+        textAlign: "center",
+        paddingLeft: 2,
     },
     error: {
         color: 'red',
@@ -280,7 +352,7 @@ const styles = StyleSheet.create({
     },
 
     inviteText: {
-        color: 'white',  
+        color: 'white',
         fontSize: 14,
         fontWeight: 'bold',
     }

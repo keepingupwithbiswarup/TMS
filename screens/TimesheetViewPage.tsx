@@ -1,20 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    FlatList,
     SafeAreaView,
     ActivityIndicator,
     SectionList,
     Image,
     TouchableOpacity,
+    Alert
 } from 'react-native';
 import moment from 'moment';
 import CalendarStrip from 'react-native-calendar-strip';
-import TimeEntryModal from '../components/TimesheetEntryModal';
+import { SwipeListView } from 'react-native-swipe-list-view';
 import IpRoute from '../utilities/iproute';
-
+import { useFocusEffect } from '@react-navigation/native';
+import TimeEntryModal from '../components/TimesheetEntryModal';
+import TimesheetUpdateModal from '../components/TimesheetUpdateModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type TimesheetEntry = {
     TimesheetEmpId: number;
@@ -34,12 +37,37 @@ type TimesheetEntry = {
     TaskName: string;
 };
 
-const TimesheetViewPage=({navigation}:{navigation:any}) => {
+const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
     const [selectedDate, setSelectedDate] = useState(moment());
     const [timesheetData, setTimesheetData] = useState<TimesheetEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
+
+
+    const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
+    const [timesheetId, setTimesheetId] = useState<number>(0);
+
+    const getEmployeeId = async (): Promise<number> => {
+        const user = await AsyncStorage.getItem('currentUser');
+        if (!user) {
+            throw new Error('No user found in AsyncStorage');
+        }
+        const { EmployeeId } = JSON.parse(user);
+        return EmployeeId;
+    };
+
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchCurrentUserId = async () => {
+            const id = await getEmployeeId();
+            setCurrentUserId(id);
+        };
+
+        fetchCurrentUserId();
+    }, []);
+
 
     const fetchTimesheetData = async () => {
         setLoading(true);
@@ -59,9 +87,11 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
         }
     };
 
-    useEffect(() => {
-        fetchTimesheetData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchTimesheetData();
+        }, [])
+    );
 
     const filteredTimesheetData = timesheetData.filter(
         (item) => moment(item.DateInfo).format('YYYY-MM-DD') === selectedDate.format('YYYY-MM-DD')
@@ -71,29 +101,40 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
         a.ProjectName.localeCompare(b.ProjectName)
     );
 
-    
-    const groupedData = sortedData.reduce((acc: { [key: string]: TimesheetEntry[] }, item) => {
-        const projectName = item.ProjectName;
-        if (!acc[projectName]) {
-            acc[projectName] = [];
-        }
-        acc[projectName].push(item);
-        return acc;
-    }, {});
+    const groupedData = sortedData.reduce(
+        (acc: { [key: string]: TimesheetEntry[] }, item) => {
+            const projectName = item.ProjectName;
+            if (!acc[projectName]) {
+                acc[projectName] = [];
+            }
+            acc[projectName].push(item);
+            return acc;
+        },
+        {}
+    );
+    const openTimesheetUpdateModal = (id: number) => {
+        setTimesheetId(id);
+        setIsUpdateModalVisible(true);
+    };
 
-    
     const sections = Object.keys(groupedData).map((projectName) => ({
         title: projectName,
         data: groupedData[projectName],
     }));
 
 
-    const TimesheetCard: React.FC<{ item: TimesheetEntry }> = ({ item }) => {
+
+    const TimesheetCard: React.FC<{ item: TimesheetEntry; onDelete: () => void }> = ({
+        item,
+        onDelete,
+    }) => {
         const formattedStartTime = moment(item.StartTime).format('h:mm A');
         const formattedEndTime = moment(item.EndTime).format('h:mm A');
         const start = moment(item.StartTime);
         const end = moment(item.EndTime);
         const duration = moment.duration(end.diff(start));
+
+
 
         const hours = duration.hours();
         const minutes = duration.minutes();
@@ -101,7 +142,6 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
         const durationString = `${hours} hr ${minutes} mins`;
 
         return (
-
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
                 <View
                     style={{
@@ -110,7 +150,8 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
                         marginRight: 25,
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
-                    }}>
+                    }}
+                >
                     <Text style={{ paddingVertical: 12, color: '#686D76', fontSize: 13 }}>
                         {formattedStartTime}
                     </Text>
@@ -129,36 +170,89 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
                 </View>
 
                 <View style={styles.cardContainer}>
-                    <Text style={styles.textBold}>{item.ProjectName}</Text>
-                    <Text style={{fontSize:14,paddingTop:8}}>Task | {item.TaskName}</Text>
-                    <Text style={{fontSize:14,paddingTop:8}}>Subtask | {item.SubTaskName}</Text>
-                    <View style={{borderLeftColor:"#6D9886",borderLeftWidth:3,borderRadius:3,padding:5,marginVertical:10,alignItems:"center",flexDirection:'row'}}>
-                        <Image style={{height:25,width:25,marginRight:5,
-                        }} source={require('../assets/report.png')} />
-                    <Text style={[styles.textRegular,{color:"#898B8A"}]}>{item.Username} commented, <Text style={{fontStyle:"italic",color:"black"}}>{item.Description}</Text></Text>
+                    <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.textBold}>{item.ProjectName}</Text>
+                        {item.EmployeeId == currentUserId ? <TouchableOpacity onPress={() => { openTimesheetUpdateModal(item.TimesheetId) }}><Image source={require('../assets/pencil-icon.png')} style={{ width: 20, height: 20, position: "relative", right: 0 }} /></TouchableOpacity> : <></>}
                     </View>
+
+                    <Text style={{ fontSize: 14, paddingTop: 8 }}>Task | {item.TaskName}</Text>
+                    <Text style={{ fontSize: 14, paddingTop: 8 }}>Subtask | {item.SubTaskName}</Text>
+                    <View
+                        style={{
+                            borderLeftColor: '#6D9886',
+                            borderLeftWidth: 3,
+                            borderRadius: 3,
+                            padding: 5,
+                            marginVertical: 10,
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                        }}
+                    >
+                        <Image
+                            style={{ height: 25, width: 25, marginRight: 5 }}
+                            source={require('../assets/report.png')}
+                        />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.textRegular, { color: '#898B8A' }]}>
+                                {item.Username} commented,
+                            </Text>
+                            <Text style={{color: 'black', marginTop: 3, fontSize: 15,marginLeft:3 }}>
+                                {item.Description}
+                            </Text>
+                        </View>
+                    </View>
+
                     <Text style={styles.hoursText}>
                         {item.Username} worked for {durationString}
                     </Text>
                 </View>
             </View>
-        )
+        );
+    };
+
+    const handleDelete = (timesheetId: number) => {
+        console.log(timesheetId);
+        Alert.alert('Delete', 'Are you sure you want to delete this timesheet entry?', [
+            { text: 'Cancel' },
+            {
+                text: 'Delete',
+                onPress: async () => {
+                    setLoading(true);
+                    try {
+                        const response = await fetch(`http://${IpRoute}/api/deletetimesheet`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ timesheetId }),
+                        });
+
+                        if (response.ok) {
+                            fetchTimesheetData();
+                        } else {
+                            throw new Error('Failed to delete the entry');
+                        }
+                    } catch (err: any) {
+                        setError(err.message);
+                    } finally {
+                        setLoading(false);
+                    }
+                },
+
+            },
+        ]);
     };
 
     return (
         <SafeAreaView style={styles.container}>
-             <View style={styles.headerContainer2}>
-            
-                            <Text style={styles.headerText}>Timesheets</Text>
-            
-                            <TouchableOpacity onPress={() => {setModalVisible(true) }} style={styles.plusButton}>
-                                <Image
-                                    source={require('../assets/add-icon.png')}
-                                    style={styles.plusIcon}
-                                />
-                            </TouchableOpacity>
-                        </View>
-            
+            <View style={styles.headerContainer2}>
+                <Text style={styles.headerText}>Timesheets</Text>
+
+                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.plusButton}>
+                    <Image source={require('../assets/add-icon.png')} style={styles.plusIcon} />
+                </TouchableOpacity>
+            </View>
+
             <View style={styles.headerContainer}>
                 <CalendarStrip
                     scrollable
@@ -204,22 +298,54 @@ const TimesheetViewPage=({navigation}:{navigation:any}) => {
                 <Text style={styles.errorText}>{error}</Text>
             ) : (
                 <SectionList
-                sections={sections}
-                renderItem={({ item }) =><TimesheetCard item={item} />}
-                renderSectionHeader={({ section: { title } }) => (
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionHeaderText}>{title}</Text>
-                    </View>
-                )}
-                keyExtractor={(item) => item.TimesheetId.toString()}
-                ListEmptyComponent={<Text style={styles.noDataText}>No timesheet for selected date</Text>}
-            />
+                    sections={sections}
+                    renderSectionHeader={({ section: { title } }) => (
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionHeaderText}>{title}</Text>
+                        </View>
+                    )}
+                    renderItem={({ item }: { item: TimesheetEntry }) => (
+                        <SwipeListView
+                            data={[item]}
+                            renderItem={({ item: TimesheetEntry }) => <TimesheetCard item={item} onDelete={() => { handleDelete(item.TimesheetId) }} />}
+                            renderHiddenItem={({ item }) => (
+                                <View style={styles.hiddenItem}>
+                                    <TouchableOpacity
+                                        style={{ padding: 12 }}
+                                        onPress={() => handleDelete(item.TimesheetId)}
+                                    >
+                                        <Image
+                                            style={{ height: 30, width: 30, tintColor: 'red' }}
+                                            source={require('../assets/delete-icon.png')}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                            rightOpenValue={-75}
+                            disableRightSwipe
+                            keyExtractor={(item: TimesheetEntry) => item.TimesheetId.toString()}
+                        />
+                    )}
+                    keyExtractor={(item: TimesheetEntry) => item.TimesheetId.toString()}
+                    ListEmptyComponent={
+                        <Text style={styles.noDataText}>No timesheet for selected date</Text>
+                    }
+                />
+
             )}
-            <View style={{ height: 20 }} />
-            <TimeEntryModal
-                visible={isModalVisible}
-                onClose={() => setModalVisible(false)}
-            />
+
+
+            <TimeEntryModal visible={isModalVisible} onClose={() => setModalVisible(false)} />
+
+            {isUpdateModalVisible && (
+                <TimesheetUpdateModal
+                    visible={isUpdateModalVisible}
+                    onClose={() => setIsUpdateModalVisible(false)}
+                    timesheetId={timesheetId}
+                />
+            )}
+
+
         </SafeAreaView>
     );
 };
@@ -233,13 +359,28 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: '#fff',
     },
+    hiddenItem: {
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+        flex: 1,
+        padding: 10,
+    },
+    //   deleteButton: {
+    //     backgroundColor: 'red',
+    //     padding: 12,
+    //   },
+    //   deleteButtonText: {
+    //     color: 'white',
+    //     fontSize: 13,
+    //   },
     cardContainer: {
         backgroundColor: '#fff',
         marginTop: 5,
         padding: 16,
         borderRadius: 12,
-        borderTopRightRadius: 0,
-        borderBottomRightRadius: 0,
+        borderTopRightRadius: 12,
+        borderBottomRightRadius: 12,
         borderLeftColor: '#117554',
         borderLeftWidth: 5,
         elevation: 2,
@@ -251,13 +392,13 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     textRegular: {
-        fontSize: 14,
+        fontSize: 13,
         marginBottom: 2,
     },
     hoursText: {
         fontSize: 14,
         marginTop: 2,
-        fontWeight:"bold",
+        fontWeight: 'bold',
     },
     errorText: {
         color: 'red',
@@ -270,21 +411,19 @@ const styles = StyleSheet.create({
         marginTop: 20,
         fontSize: 16,
         color: '#333',
-        fontStyle:"italic",
+        fontStyle: 'italic',
     },
-
     sectionHeader: {
         backgroundColor: '#F5F7F8',
         paddingVertical: 15,
         paddingHorizontal: 16,
-        marginVertical:10,
+        marginVertical: 10,
     },
     sectionHeaderText: {
         fontWeight: 'bold',
         fontSize: 16,
-        color:"#45474B"
+        color: '#45474B',
     },
-
     backButton: {
         position: 'absolute',
         left: 25,

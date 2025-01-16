@@ -82,7 +82,7 @@ const TeamMemberCard: React.FC<TeamMemberCardProps> = ({
 
         </View>
 
-        <View style={{ borderBottomWidth: 0.2, borderBottomColor: "#D8D8D8", padding: 10, }} />
+        <View style={{ borderBottomWidth: 0.2, borderBottomColor: "#D8D8D8", padding: 5, }} />
 
         <View style={styles.bottomRow}>
           <View style={styles.headingContainer}>
@@ -113,8 +113,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 12,
-    height: 150,
-    elevation: 0.5,
+    height: 130,
+    elevation: 2,
     marginHorizontal: 20,
     marginBottom:10,
   },
@@ -146,16 +146,15 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   name: {
-    fontSize: 19,
-    fontWeight: 'bold',
+    fontSize: 17,
     marginLeft: 10,
   },
   email: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#929AAB',
     marginTop: 4,
     marginLeft: 10,
-    fontWeight: "bold",
+    fontStyle:"italic",
 
   },
   bottomRow: {
@@ -172,7 +171,7 @@ const styles = StyleSheet.create({
   valueContainer: {
     flexDirection: 'column',
     justifyContent: 'flex-end',
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
   },
   role: {
     fontSize: 14,

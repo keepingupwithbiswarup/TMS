@@ -307,18 +307,18 @@ mssql.connect(dbConfig).then(pool => {
 
     app.post('/api/createproject', async (req, res) => {
       const { projectName, description, dueDate, deptId, employeeIds } = req.body;
-    
+
       if (!projectName || !description || !dueDate || !deptId || !Array.isArray(employeeIds) || employeeIds.length === 0) {
         return res.status(400).json({
           error: 'All fields are required: ProjectName, Description, DueDate, DeptId, and at least one EmployeeId.',
         });
       }
-    
+
       const transaction = new mssql.Transaction();
-    
+
       try {
         await transaction.begin();
-    
+
         const insertProjectQuery = `
           INSERT INTO Project (ProjectName, Description, DueDate, DeptId)
           OUTPUT INSERTED.ProjectId
@@ -329,10 +329,10 @@ mssql.connect(dbConfig).then(pool => {
         projectRequest.input('Description', description);
         projectRequest.input('DueDate', dueDate);
         projectRequest.input('DeptId', deptId);
-    
+
         const projectResult = await projectRequest.query(insertProjectQuery);
         const projectId = projectResult.recordset[0].ProjectId;
-    
+
         const insertTeamQuery = `
           INSERT INTO Team (ProjectId)
           OUTPUT INSERTED.TeamId
@@ -340,10 +340,10 @@ mssql.connect(dbConfig).then(pool => {
         `;
         const teamRequest = transaction.request();
         teamRequest.input('ProjectId', projectId);
-    
+
         const teamResult = await teamRequest.query(insertTeamQuery);
         const teamId = teamResult.recordset[0].TeamId;
-    
+
         const insertTeamMemberQuery = `
           INSERT INTO TeamMembers (EmployeeId, TeamId)
           VALUES (@EmployeeId, @TeamId)
@@ -354,9 +354,9 @@ mssql.connect(dbConfig).then(pool => {
           teamMemberRequest.input('TeamId', teamId);
           await teamMemberRequest.query(insertTeamMemberQuery);
         }
-    
+
         await transaction.commit();
-    
+
         res.status(201).json({
           message: 'Project, Team, and Team Members created successfully.',
           projectId,
@@ -368,7 +368,7 @@ mssql.connect(dbConfig).then(pool => {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
-    
+
 
     app.get('/api/subtasks', async (req, res) => {
       try {
@@ -758,6 +758,164 @@ JOIN
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
+
+
+    app.delete('/api/deletetimesheet', async (req, res) => {
+      const sql = require('mssql');
+      const { timesheetId } = req.body;
+
+      if (!timesheetId || typeof timesheetId !== 'number') {
+        console.error("Invalid TimesheetId received:", timesheetId);
+        return res.status(400).send("Timesheet ID must be a valid number");
+      }
+
+      try {
+        const result = await pool.request()
+          .input('TimesheetId', sql.Int, timesheetId)
+          .query('DELETE FROM Timesheet WHERE TimesheetId = @TimesheetId');
+
+        if (result.rowsAffected[0] === 0) {
+          console.warn("Timesheet not found for TimesheetId:", timesheetId);
+          return res.status(404).send("Timesheet not found");
+        }
+
+        res.status(200).send("Timesheet deleted successfully");
+      } catch (err) {
+        console.error("Error executing query:", err.message, err.stack);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
+
+    app.put('/api/updatetimesheet', async (req, res) => {
+      const {
+        timesheetId,
+        subTaskId,
+        startTime,
+        endTime,
+        description,
+        status,
+        dateInfo,
+        employeeId,
+        projectId,
+      } = req.body;
+
+      if (
+        !timesheetId ||
+        !subTaskId ||
+        !startTime ||
+        !endTime ||
+        !description ||
+        !status ||
+        !dateInfo ||
+        !employeeId ||
+        !projectId
+      ) {
+        return res.status(400).json({
+          error: 'All fields are required: TimesheetId, SubTaskId, StartTime, EndTime, Description, Status, DateInfo, EmployeeId, and ProjectId.',
+        });
+      }
+
+      const transaction = new mssql.Transaction();
+
+      try {
+        await transaction.begin();
+
+        const updateTimesheetQuery = `
+          UPDATE Timesheet
+          SET
+            SubTaskId = @SubTaskId,
+            StartTime = @StartTime,
+            EndTime = @EndTime,
+            Description = @Description,
+            Status = @Status,
+            DateInfo = @DateInfo
+          WHERE TimesheetId = @TimesheetId
+        `;
+
+        const timesheetRequest = transaction.request();
+        timesheetRequest.input('TimesheetId', mssql.Int, timesheetId);
+        timesheetRequest.input('SubTaskId', mssql.Int, subTaskId);
+        timesheetRequest.input('StartTime', mssql.DateTime, startTime);
+        timesheetRequest.input('EndTime', mssql.DateTime, endTime);
+        timesheetRequest.input('Description', mssql.NVarChar(200), description);
+        timesheetRequest.input('Status', mssql.NVarChar(100), status);
+        timesheetRequest.input('DateInfo', mssql.Date, dateInfo);
+
+        const timesheetResult = await timesheetRequest.query(updateTimesheetQuery);
+
+        if (timesheetResult.rowsAffected[0] === 0) {
+          throw new Error('Timesheet not found.');
+        }
+
+        const updateTimesheetEmpRelQuery = `
+          UPDATE TimesheetEmpRel
+          SET
+            EmployeeId = @EmployeeId,
+            ProjectId = @ProjectId
+          WHERE TimesheetId = @TimesheetId
+        `;
+
+        const timesheetEmpRelRequest = transaction.request();
+        timesheetEmpRelRequest.input('EmployeeId', mssql.Int, employeeId);
+        timesheetEmpRelRequest.input('ProjectId', mssql.Int, projectId);
+        timesheetEmpRelRequest.input('TimesheetId', mssql.Int, timesheetId);
+
+        const timesheetEmpRelResult = await timesheetEmpRelRequest.query(updateTimesheetEmpRelQuery);
+
+        if (timesheetEmpRelResult.rowsAffected[0] === 0) {
+          throw new Error('TimesheetEmpRel not found.');
+        }
+
+        await transaction.commit();
+
+        res.status(200).json({
+          message: 'Timesheet and TimesheetEmpRel updated successfully.',
+        });
+      } catch (err) {
+        console.error('Error executing transaction:', err.message);
+
+        await transaction.rollback();
+
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+
+    app.post('/api/addteammembers', async (req, res) => {
+      const sql = require('mssql');
+      const { teamId, employeeIds } = req.body;
+
+      if (!teamId || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+        console.error("Invalid inputs received:", { teamId, employeeIds });
+        return res.status(400).send("TeamId and EmployeeIds must be valid");
+      }
+
+      try {
+        for (let employeeId of employeeIds) {
+          const result = await pool.request()
+            .input('EmployeeId', sql.Int, employeeId)
+            .input('TeamId', sql.Int, teamId)
+            .query(`
+              INSERT INTO TeamMembers (EmployeeId, TeamId) 
+              VALUES (@EmployeeId, @TeamId)
+            `);
+
+          if (result.rowsAffected[0] === 0) {
+            console.warn("Failed to add TeamMember for EmployeeId:", employeeId, "to TeamId:", teamId);
+          }
+        }
+
+        res.status(201).send("Team Members added successfully");
+      } catch (err) {
+        console.error("Error executing query:", err.message, err.stack);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+
+
+
+    
 
 
 
