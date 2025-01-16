@@ -54,6 +54,8 @@ import AddSubTask from './screens/AddSubTask';
 import EditTask from './screens/EditTask';
 import EditSubTask from './screens/EditSubTask';
 import EditProject from './screens/EditProject';
+import TimesheetViewPage from './screens/TimesheetViewPage';
+import AddTimesheet from './screens/AddTimesheet';
 
 
 
@@ -129,7 +131,9 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
             icon = require('./assets/project-icon.png');
           } else if (route.name === 'Settings') {
             icon = require('./assets/settings.png');
-          }
+          }  else if (route.name === 'Timesheets') {
+            icon = require('./assets/timesheet-icon.png');
+          } 
 
           return (
             <Image
@@ -156,6 +160,9 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
       </Tab.Screen>
       <Tab.Screen name="Projects">
         {(props) => <ProjectScreen {...props} department={department} />}
+      </Tab.Screen>
+      <Tab.Screen name="Timesheets">
+        {(props) => <TimesheetViewPage{...props} />}
       </Tab.Screen>
       <Tab.Screen name="Settings">
         {(props) => <DepartmentSetings {...props} department={department} />}
@@ -205,11 +212,12 @@ const AppNavigator = () => {
             tintColor: "white",
             marginBottom: 10,
           }} source={require('./assets/work-schedule.png')}></Image>
+          <View style={{height:10}}/>
           <Text style={{
             fontSize: 22,
             color: 'white',
             fontWeight: "bold",
-          }}>TMS</Text>
+          }}>Timesheet Management</Text>
         </Animated.View>
       </View>
     );
@@ -254,6 +262,8 @@ const AppNavigator = () => {
       <Stack.Screen name="EditTask" component={EditTask} options={{ headerShown: false }} />
       <Stack.Screen name="EditSubTask" component={EditSubTask} options={{ headerShown: false }} />
       <Stack.Screen name="EditProject" component={EditProject} options={{ headerShown: false }} />
+      <Stack.Screen name="AddTimesheet" component={AddTimesheet} options={{ headerShown: false }} />
+      {/* <Stack.Screen name="TimesheetViewPage" component={TimesheetViewPage} options={{ headerShown: false }} /> */}
     </Stack.Navigator>
   );
 };

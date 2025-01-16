@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import IpRoute from '../utilities/iproute';
 
-const API_BASE_URL = 'http://125.22.105.182:2002';
+const API_BASE_URL = 'http://125.22.105.182:1089';
 
 export async function registerUser(userName: string, email: string, password: string): Promise<any> {
   try {

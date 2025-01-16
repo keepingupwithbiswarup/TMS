@@ -94,48 +94,49 @@ const AddProjectScreen = ({route}:{route:any}) => {
 
       const handleSubmit = async () => {
         if (!projectName || !description || selectedEmployees.length === 0) {
-            Alert.alert('Error', 'Please fill in all fields and select at least one employee.');
-            return;
+          Alert.alert('Error', 'Please fill in all fields and select at least one employee.');
+          return;
         }
-    
+      
         try {
-            for (const employee of selectedEmployees) {
-                const response = await fetch(`http://${IpRoute}/api/createproject`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        projectName,
-                        description,
-                        dueDate: dueDate,
-                        deptId: department,
-                        employeeId: employee.EmployeeId,
-                    }),
-                });
-    
-                const result = await response.json();
-    
-                if (!response.ok) {
-                    console.error(`Failed for EmployeeId: ${employee.EmployeeId}`, result);
-                    Alert.alert('Error', `Failed to add project for employee: ${employee.Username}`);
-                    return;
-                }
-    
-                console.log(`Project created for EmployeeId: ${employee.EmployeeId}`, result);
-            }
-    
-            Alert.alert('Success', 'Project and team members added successfully!');
-            setProjectName('');
-            setDescription('');
-            setDueDate(new Date());
-            setFormattedDueDate(format(new Date(), 'do MMMM, yyyy, EEEE'));
-            setSelectedEmployees([]);
+          const employeeIds = selectedEmployees.map((employee) => employee.EmployeeId);
+      
+          const response = await fetch(`http://${IpRoute}/api/createproject`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectName,
+              description,
+              dueDate: dueDate,
+              deptId: department,
+              employeeIds, 
+            }),
+          });
+      
+          const result = await response.json();
+      
+          if (!response.ok) {
+            console.error('Failed to create project:', result);
+            Alert.alert('Error', 'Failed to add project and assign team members.');
+            return;
+          }
+      
+          console.log('Project and team members created successfully:', result);
+      
+          Alert.alert('Success', 'Project and team members added successfully!');
+          setProjectName('');
+          setDescription('');
+          setDueDate(new Date());
+          setFormattedDueDate(format(new Date(), 'do MMMM, yyyy, EEEE'));
+          setSelectedEmployees([]);
         } catch (error) {
-            console.error('Error:', error);
-            Alert.alert('Error', 'Something went wrong while adding the project.');
+          console.error('Error:', error);
+          Alert.alert('Error', 'Something went wrong while adding the project.');
         }
-    };
+      };
+      
     
       
     

@@ -10,7 +10,7 @@ const Header = ({ headingText }:{headingText: string}) => {
 
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Image
-          source={require('../assets/back-arrow.png')} 
+          source={require('../assets/back2.png')} 
           style={styles.backIcon}
         />
       </TouchableOpacity>
@@ -41,9 +41,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     resizeMode: 'contain',
+    marginLeft:5,
   },
   headerText: {
     fontSize: 16,
