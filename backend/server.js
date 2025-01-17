@@ -913,6 +913,76 @@ JOIN
       }
     });
 
+    app.post('/api/calendar', async (req, res) => {
+      const { deptId } = req.body; 
+    
+      if (!deptId) {
+        return res.status(400).send('Department ID is required');
+      }
+    
+      try {
+        const result = await pool.request()
+          .input('DeptId', deptId) 
+          .query(`
+            SELECT ST.*, P.ProjectName
+            FROM SubTask ST
+            JOIN Task T ON ST.TaskId = T.TaskId
+            JOIN Project P ON T.ProjectId = P.ProjectId
+            WHERE P.DeptId = @DeptId AND ST.Status = 'Due' OR ST.Status='Ongoing'
+          `);
+    
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+
+
+    app.post('/api/workinghours', async (req, res) => {
+      const { department } = req.body;
+    
+      if (!department) {
+        return res.status(400).json({ error: 'Department name is required.' });
+      }
+    
+      try {
+        const result = await pool
+          .request()
+          .input('Department',  mssql.NVarChar(200), department)
+          .query(`
+            SELECT 
+                e.EmployeeId,
+                e.Username AS EmployeeName,
+                t.DateInfo,
+                COALESCE(t.StartTime, '00:00:00') AS StartTime,
+                COALESCE(t.EndTime, '00:00:00') AS EndTime
+            FROM 
+                Employees e
+            LEFT JOIN 
+                TimesheetEmpRel ter ON e.EmployeeId = ter.EmployeeId
+            LEFT JOIN 
+                Timesheet t ON ter.TimesheetId = t.TimesheetId
+            WHERE 
+                e.Department = @Department
+            ORDER BY 
+                e.EmployeeId, t.StartTime;
+          `);
+    
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+
+
+    
+    
+    
+
 
 
     
