@@ -11,25 +11,26 @@ import {
 } from 'react-native';
 import * as Progress from 'react-native-progress';
 import IpRoute from '../utilities/iproute';
+import Header from '../components/Header';
 
 const projectIcon = require('../assets/project-icon.png');
 const commentIcon = require('../assets/settings.png');
 const documentIcon = require('../assets/report-icon.png');
 const menuIcon = require('../assets/grid.png');
 
-interface DepartmentDetailsProps {
-  department: any;
+interface UtilityProps {
   route: any;
   navigation: any;
 }
 
-const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, department }) => {
+const AllProjects: React.FC<UtilityProps> = ({ navigation }) => {
   const [filter, setFilter] = useState('In Progress');
   const [searchQuery, setSearchQuery] = useState('');
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Function to fetch project status
   const getProjectStatus = async (projectId: number): Promise<string> => {
     try {
       if (!projectId) {
@@ -77,10 +78,10 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
       try {
         const response = await fetch(`http://${IpRoute}/api/projects`);
         const data = await response.json();
-        const filteredData = data.filter((project: any) => project.DeptId === department);
 
+        // Fetch statuses for each project
         const projectsWithStatus = await Promise.all(
-          filteredData.map(async (project: any) => {
+          data.map(async (project: any) => {
             const status = await getProjectStatus(project.ProjectId);
             return {
               id: project.ProjectId.toString(),
@@ -102,7 +103,7 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
     };
 
     fetchProjects();
-  }, [department]);
+  }, []);
 
   const filteredProjects = projects
     .filter((project) => {
@@ -135,10 +136,8 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
     }
 
     return (
-      <TouchableOpacity
-        onPress={() => navigation.navigate('TaskDetails', { projectId: item.id })}
-        activeOpacity={0.8}
-      >
+        
+      <TouchableOpacity onPress={() => navigation.navigate('TaskDetails', { projectId: item.id })} activeOpacity={0.8}>
         <View style={styles.projectCard}>
           <View style={styles.header}>
             <View style={[styles.statusBadge, { backgroundColor: statusBackgroundColor }]}>
@@ -177,63 +176,64 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Image source={require('../assets/back-arrow.png')} style={styles.backIcon} />
-        </TouchableOpacity>
-
-        <Text style={styles.headerText}>Projects</Text>
-
-        <TouchableOpacity
-          onPress={() => {
-            navigation.navigate('AddProjectScreen', { department: department });
-          }}
-          style={styles.plusButton}
-        >
-          <Image source={require('../assets/add-icon.png')} style={styles.plusIcon} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'In Progress' && styles.activeButton]}
-          onPress={() => setFilter('In Progress')}
-        >
-          <Text style={styles.filterText}>In Progress</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'All Projects' && styles.activeButton]}
-          onPress={() => setFilter('All Projects')}
-        >
-          <Text style={styles.filterText}>All Projects</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TextInput
-        style={styles.searchBar}
-        placeholder="Search projects..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#4a6fe9" style={styles.loadingIndicator} />
-      ) : error ? (
-        <Text style={styles.errorText}>{error}</Text>
-      ) : (
-        <FlatList
-          data={filteredProjects}
-          renderItem={renderProject}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-    </View>
-  );
-};
-
+ return (
+         <View style={styles.container}>
+             <View style={styles.headerContainer}>
+                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                     <Image
+                         source={require('../assets/back-arrow.png')}
+                         style={styles.backIcon}
+                     />
+                 </TouchableOpacity>
+ 
+                 <Text style={styles.headerText}>Projects</Text>
+ 
+                 {/* <TouchableOpacity onPress={() => { navigation.navigate('AddProjectScreen', { department: department }) }} style={styles.plusButton}>
+                     <Image
+                         source={require('../assets/add-icon.png')}
+                         style={styles.plusIcon}
+                     />
+                 </TouchableOpacity> */}
+             </View>
+ 
+             <View style={styles.filterContainer}>
+                 <TouchableOpacity
+                     style={[styles.filterButton, filter === 'In Progress' && styles.activeButton]}
+                     onPress={() => setFilter('In Progress')}
+                 >
+                     <Text style={styles.filterText}>In Progress</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity
+                     style={[styles.filterButton, filter === 'All Projects' && styles.activeButton]}
+                     onPress={() => setFilter('All Projects')}
+                 >
+                     <Text style={styles.filterText}>All Projects</Text>
+                 </TouchableOpacity>
+             </View>
+ 
+             <TextInput
+                 style={styles.searchBar}
+                 placeholder="Search projects..."
+                 value={searchQuery}
+                 onChangeText={setSearchQuery}
+             />
+ 
+             {loading ? (
+                 <ActivityIndicator size="large" color="#4a6fe9" style={styles.loadingIndicator} />
+             ) : error ? (
+                 <Text style={styles.errorText}>{error}</Text>
+             ) : (
+                 <FlatList
+                     data={filteredProjects}
+                     renderItem={renderProject}
+                     keyExtractor={(item) => item.id}
+                     contentContainerStyle={styles.listContent}
+                 />
+             )}
+         </View>
+     );
+ };
+ 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -401,4 +401,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ProjectScreen;
+export default AllProjects;

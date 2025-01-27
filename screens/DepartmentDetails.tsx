@@ -45,9 +45,8 @@ interface WorkingHoursData {
   DateInfo: string;
 }
 interface TransformedData {
-  name: string;
-  color: string;
-  data: Array<{ weekday: string; hours: number; dateInfo?: string }>;
+  [key: string]: any;
+  // data: Array<{ weekday: string; hours: number; dateInfo?: string }>;
 }
 
 
@@ -59,7 +58,7 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
   const [markedDates, setMarkedDates] = useState({});
   const [departmentObj, setDepartmentObj] = useState<Department>();
   const [loading, setLoading] = useState<boolean>(true);
-  const [workingHoursData, setWorkingHoursData] = useState<TransformedData[]>([]);
+  const [workingHoursData, setWorkingHoursData] = useState<TransformedData>({});
   const [linechartWorkHours, setLineChartWorkHours] = useState<WorkingHoursData[]>([]);
   const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState<any>(null);
 
@@ -122,7 +121,7 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
             }
 
             formattedTasks[date].push({
-              time: 'Due Today',
+              time: 'Due',
               title: SubTaskName,
             });
 
@@ -171,57 +170,50 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
     }, [departmentObj?.DeptName])
   );
 
-  const transformData = (apiData: WorkingHoursData[]): TransformedData[] => {
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
-    const groupedData = apiData.reduce((acc: { [key: string]: TransformedData }, entry) => {
-      const employeeName = entry.EmployeeName;
-      if (!employeeName) return acc;
-  
-      const dateInfo = entry.DateInfo;
-      const weekday = moment(dateInfo).format('ddd');
-      const startTime = moment.utc(entry.StartTime);
-      const endTime = moment.utc(entry.EndTime);
-      const hours = endTime.isValid() && startTime.isValid()
-        ? endTime.diff(startTime, 'minutes') / 60
-        : 0;
-  
-      if (!acc[employeeName]) {
-        acc[employeeName] = {
-          name: employeeName,
-          data: weekdays.map((day) => ({ weekday: day, hours: 0, dateInfo: '' })),
+  const transformData = (apiData: WorkingHoursData[]): TransformedData => {
+    console.log("Api data : ", apiData);
+    const transformedData: TransformedData = {
+    };
+
+    apiData.forEach((entry) => {
+      const { DateInfo, EmployeeName, StartTime, EndTime } = entry;
+
+      if (!DateInfo) return;
+
+      const date = new Date(DateInfo);
+      const dateStr = date.toISOString().split('T')[0];
+      const weekday = date.toLocaleString('en-US', { weekday: 'long' });
+
+      const duration = (new Date(EndTime).getTime() - new Date(StartTime).getTime()) / (1000 * 60 * 60);
+      if (!transformedData[EmployeeName]) {
+        transformedData[EmployeeName] = {
           color: getRandomColor(),
+          data: []
         };
       }
-  
-      const employeeData = acc[employeeName].data;
-      const dayIndex = employeeData.findIndex((day) => day.weekday === weekday);
-  
-      if (dayIndex !== -1) {
-        employeeData[dayIndex].hours += hours;
-        if (!employeeData[dayIndex].dateInfo || employeeData[dayIndex].dateInfo !== dateInfo) {
-          employeeData[dayIndex].dateInfo = dateInfo;
-        }
+
+      const dateEntry = transformedData[EmployeeName].data.find((entry: { Date: string; }) => entry.Date === dateStr);
+
+      if (!dateEntry) {
+        transformedData[EmployeeName].data.push({
+          Date: dateStr,
+          Weekday: weekday,
+          TotalHours: duration,
+          Entries: [{ StartTime: StartTime.slice(11, 16), EndTime: EndTime.slice(11, 16), Duration: `${duration.toFixed(2)} hrs` }],
+        });
+      } else {
+        transformedData[EmployeeName].data.TotalHours += duration;
+        dateEntry.data.Entries.push({
+          StartTime: StartTime.slice(11, 16),
+          EndTime: EndTime.slice(11, 16),
+          Duration: `${duration.toFixed(2)} hrs`,
+        });
       }
-  
-      // console.log('Current groupedData:', JSON.stringify(acc, null, 2));
-  
-      return acc;
-  
-    }, {});
-  
-    console.log('Final groupedData:', JSON.stringify(groupedData, null, 2));
-  
-    return Object.values(groupedData);
+    });
+    console.log("Transformed data : ", JSON.stringify(transformedData));
+    return transformedData;
+
   };
-  
-
-
-
-
-
-
-
 
   const getRandomColor = () => {
     const letters = '0123456789ABCDEF';
@@ -236,20 +228,6 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
     const transformedData = transformData(linechartWorkHours);
     setWorkingHoursData(transformedData);
   }, [linechartWorkHours]);
-
-  
-  // useEffect(() => {
-  //   if (selectedEmployee) {
-  //     const employeeData = workingHoursData.find((emp) => emp.name === selectedEmployee);
-  //     if (employeeData) {
-  //       const filteredDetails = employeeData.data.filter((day) => {
-  //         const formattedDate = moment(day.dateInfo).format('YYYY-MM-DD');
-  //         return currentWeekDates.some((date) => formattedDate === date || moment(formattedDate).isBetween(date, moment(date).add(1, 'week'), 'day', '[]'));
-  //       });
-  //       setSelectedEmployeeDetails({ ...employeeData, data: filteredDetails });
-  //     }
-  //   }
-  // }, [selectedEmployee, currentWeek, workingHoursData]);
 
   if (loading) {
     return (
@@ -279,15 +257,11 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
       setSelectedEmployeeDetails(null);
     } else {
       setSelectedEmployee(name);
-      const employeeData = workingHoursData.find((emp) => emp.name === name);
+      const employeeData = workingHoursData[name];
       setSelectedEmployeeDetails(employeeData);
     }
   };
-  const formatTime = (decimalHours: number): string => {
-    const hours = Math.floor(decimalHours);
-    const minutes = Math.round((decimalHours - hours) * 60);
-    return `${hours > 0 ? `${hours} hour${hours > 1 ? 's' : ''} ` : ''}${minutes > 0 ? `${minutes} minute${minutes > 1 ? 's' : ''}` : ''}`.trim();
-  };
+
   moment.updateLocale('en', {
     week: {
       dow: 1,
@@ -306,12 +280,12 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
     );
   };
   const currentWeekDates = getWeekDates(currentWeek);
-  const filteredData = workingHoursData.map((emp) => ({
-    ...emp,
-    data: emp.data.filter((day) =>
-      currentWeekDates.includes(moment(day.dateInfo).format('YYYY-MM-DD'))
-    ),
-  }));
+  // const filteredData = workingHoursData.map((emp) => ({
+  //   ...emp,
+  //   data: emp.data.filter((day) =>
+  //     currentWeekDates.includes(moment(day.dateInfo).format('YYYY-MM-DD'))
+  //   ),
+  // }));
 
   const filteredEmployeeDetails = selectedEmployee
     ? selectedEmployeeDetails.data.filter((entry: WorkingHoursData) =>
@@ -321,47 +295,53 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
 
   const renderItem = ({ item }: { item: string }) => {
     switch (item) {
-      
+
       case 'lineChart':
         return (
           <View style={{ justifyContent: 'center' }}>
             <View style={styles.section}>
               <Text style={styles.title}>Daily Working Hours</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginVertical: 15, paddingBottom: 20 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 16,
+                  marginVertical: 15,
+                  paddingBottom: 20,
+                }}
+              >
                 <TouchableOpacity onPress={handlePreviousWeek}>
                   <Text style={{ color: '#4a6fe9', fontWeight: 'bold' }}>Previous Week</Text>
                 </TouchableOpacity>
                 <Text style={{ fontSize: 16, fontWeight: 'bold' }}>
-                  {currentWeek.clone().startOf('week').format('MMM D')} - {currentWeek.clone().startOf('week').add(5, 'days').format('MMM D')}
+                  {currentWeek.clone().startOf('week').format('MMM D')} -{' '}
+                  {currentWeek.clone().startOf('week').add(5, 'days').format('MMM D')}
                 </Text>
-
                 <TouchableOpacity onPress={handleNextWeek}>
                   <Text style={{ color: '#4a6fe9', fontWeight: 'bold' }}>Next Week</Text>
                 </TouchableOpacity>
               </View>
-              {workingHoursData.length > 0 ? (
+
+              {Object.keys(workingHoursData).length > 0 ? (
                 <LineChart
                   data={{
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-                    datasets: (selectedEmployee
-                      ? filteredData.filter((emp) => emp.name === selectedEmployee)
-                      : filteredData
-                    ).map((emp) => ({
-                      data: currentWeekDates.map((date) => {
-                        const workDay = emp.data.find(
-                          (day) => moment(day.dateInfo).format('YYYY-MM-DD') === date
-                        );
-
-                        if (workDay) {
-                          return workDay.hours;
-                        }
-                        return 0;
-                      }),
-                      strokeWidth: 0.5,
-                      color: (opacity = 1) => {
-                        return emp.color || `rgba(74, 111, 233, ${opacity})`;
-                      },
-                    })),
+                    datasets: Object.keys(workingHoursData)
+                      .filter((emp) =>
+                        selectedEmployee ? emp === selectedEmployee : true
+                      )
+                      .map((emp) => ({
+                        data: currentWeekDates.map((date) => {
+                          const employee = workingHoursData[emp];
+                          const workDay = employee.data.find(
+                            (day: { Date: moment.MomentInput; }) => moment(day.Date).format('YYYY-MM-DD') === date
+                          );
+                          return workDay ? workDay.TotalHours : 0;
+                        }),
+                        strokeWidth: 2,
+                        color: (opacity = 1) =>
+                          workingHoursData[emp].color || `rgba(74, 111, 233, ${opacity})`,
+                      })),
                   }}
                   chartConfig={{
                     backgroundColor: 'white',
@@ -372,26 +352,38 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
                     propsForDots: {
                       r: '2',
                     },
-                    decimalPlaces: 0,
+                    decimalPlaces: 1,
                   }}
                   width={300}
                   height={300}
                 />
               ) : (
-                <Text>No Employees in this Department</Text>
+                <Text style={{padding:10,paddingHorizontal:15,fontStyle:"italic"}}>No working hours in this Department</Text>
               )}
+
               <View style={styles.legendContainer}>
-                {workingHoursData.map((emp: any) => (
+                {Object.keys(workingHoursData).map((emp: any) => (
                   <TouchableOpacity
-                    onPress={() => handleLegendPress(emp.name)}
-                    style={[styles.legendItem, selectedEmployee === emp.name && styles.selectedLegend]}
-                    key={emp.name}
+                    onPress={() => handleLegendPress(emp)}
+                    style={[
+                      styles.legendItem,
+                      selectedEmployee === emp && styles.selectedLegend,
+                    ]}
+                    key={emp}
                   >
-                    <View style={[styles.legendDot, { backgroundColor: emp.color }]} />
+                    <View
+                      style={[
+                        styles.legendDot,
+                        { backgroundColor: workingHoursData[emp].color },
+                      ]}
+                    />
                     <Text
-                      style={[styles.legendText, selectedEmployee === emp.name && styles.selectedText]}
+                      style={[
+                        styles.legendText,
+                        selectedEmployee === emp && styles.selectedText,
+                      ]}
                     >
-                      {emp.name}
+                      {emp}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -403,56 +395,72 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
                     Working Hours for {selectedEmployeeDetails.name}
                   </Text>
                   <View style={styles.employeeDetailsContent}>
-                    {filteredEmployeeDetails.map((entry: { weekday: string; hours: number; dateInfo?: string }, index: number) => (
-                      <View style={styles.employeeDetailsRow} key={index}>
-                        <Text style={styles.weekdayText}>{entry.weekday}:</Text>
-                        <Text style={styles.hoursText}>{formatTime(entry.hours)}</Text>
-                      </View>
-                    ))}
+                    {selectedEmployeeDetails.data
+                      .filter((entry: { Date: string }) =>
+                        moment(entry.Date).isBetween(
+                          currentWeek.clone().startOf('week'),
+                          currentWeek.clone().endOf('week'),
+                          'day',
+                          '[]'
+                        )
+                      )
+                      .map(
+                        (
+                          entry: {
+                            Weekday: string;
+                            TotalHours: number;
+                            Date: string;
+                          },
+                          index: number
+                        ) => (
+                          <View style={styles.employeeDetailsRow} key={index}>
+                            <Text style={styles.weekdayText}>{entry.Weekday}:</Text>
+                            <Text style={styles.hoursText}>
+                              {entry.TotalHours.toFixed(2)} hrs
+                            </Text>
+                          </View>
+                        )
+                      )}
                   </View>
                 </View>
               )}
 
-
             </View>
             <View style={{ height: 80 }} />
           </View>
+
         );
-
-
-
-
-        case 'calendar':
-          return (
-            <View>
-              <Text style={{ fontSize: 20, paddingVertical: 15, letterSpacing: 5, textAlign: "center", paddingTop: 25 }}>{departmentObj?.DeptType} Dashboard</Text>
-              <View style={styles.section}>
-                <Text style={styles.title}>Calendar</Text>
-                <Calendar
-                  markedDates={{
-                    [selectedDate]: { selected: true, selectedColor: '#4a6fe9' },
-                    ...markedDates
-                  }}
-                  onDayPress={handleDayPress}
-                  theme={{
-                    selectedDayBackgroundColor: '#4a6fe9',
-                    todayTextColor: '#4a6fe9',
-                    arrowColor: '#4a6fe9',
-                  }}
+      case 'calendar':
+        return (
+          <View>
+            <Text style={{ fontSize: 20, paddingVertical: 15, letterSpacing: 5, textAlign: "center", paddingTop: 25 }}>{departmentObj?.DeptType} Dashboard</Text>
+            <View style={styles.section}>
+              <Text style={styles.title}>Calendar</Text>
+              <Calendar
+                markedDates={{
+                  [selectedDate]: { selected: true, selectedColor: '#4a6fe9' },
+                  ...markedDates
+                }}
+                onDayPress={handleDayPress}
+                theme={{
+                  selectedDayBackgroundColor: '#4a6fe9',
+                  todayTextColor: '#4a6fe9',
+                  arrowColor: '#4a6fe9',
+                }}
+              />
+              <Text style={styles.taskHeader}>Today's Tasks</Text>
+              {departmentTasks[selectedDate] ? (
+                <FlatList
+                  data={departmentTasks[selectedDate]}
+                  keyExtractor={(item, index) => index.toString()}
+                  renderItem={renderTask}
                 />
-                <Text style={styles.taskHeader}>Today's Tasks</Text>
-                {departmentTasks[selectedDate] ? (
-                  <FlatList
-                    data={departmentTasks[selectedDate]}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={renderTask}
-                  />
-                ) : (
-                  <Text style={styles.noTasksText}>No tasks due on this day</Text>
-                )}
-              </View>
+              ) : (
+                <Text style={styles.noTasksText}>No tasks due on this day</Text>
+              )}
             </View>
-          );
+          </View>
+        );
 
 
       default:

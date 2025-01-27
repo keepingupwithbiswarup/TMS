@@ -12,7 +12,7 @@ import ChooseGoalPage from './screens/ChooseGoalPage';
 import AdminDashboard from './screens/AdminDashboard';
 import TimeClock from './screens/TimeClock';
 import Timesheets from './screens/Timesheets';
-import Approvals from './screens/Approvals';
+import Approvals from './screens/AllProjects';
 import Menu from './screens/Menu';
 import { ActivityIndicator, Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -56,6 +56,8 @@ import EditSubTask from './screens/EditSubTask';
 import EditProject from './screens/EditProject';
 import TimesheetViewPage from './screens/TimesheetViewPage';
 import AddTimesheet from './screens/AddTimesheet';
+import AllProjects from './screens/AllProjects';
+import TimesheetProject from './screens/TimesheetProject';
 
 
 
@@ -80,8 +82,8 @@ const BottomTabNavigator = () => {
             icon = require('./assets/timeclock-icon.png');
           } else if (route.name === 'Timesheets') {
             icon = require('./assets/timesheet-icon.png');
-          } else if (route.name === 'Approvals') {
-            icon = require('./assets/approvals.png');
+          } else if (route.name === 'Projects') {
+            icon = require('./assets/project-icon.png');
           } else if (route.name === 'Menu') {
             icon = require('./assets/menu-icon.png');
           }
@@ -104,9 +106,9 @@ const BottomTabNavigator = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={AdminDashboard} />
-      <Tab.Screen name="Time Clock" component={TimeClock} />
+      {/* <Tab.Screen name="Time Clock" component={TimeClock} /> */}
       <Tab.Screen name="Timesheets" component={Timesheets} />
-      <Tab.Screen name="Approvals" component={Approvals} />
+      <Tab.Screen name="Projects" component={AllProjects} />
       <Tab.Screen name="Menu" component={Menu} />
     </Tab.Navigator>
   );
@@ -162,7 +164,7 @@ const DepartmentBottomTabNavigator = ({ route }: { route: any }) => {
         {(props) => <ProjectScreen {...props} department={department} />}
       </Tab.Screen>
       <Tab.Screen name="Timesheets">
-        {(props) => <TimesheetViewPage{...props} />}
+        {(props) => <TimesheetViewPage{...props} department={department}/>}
       </Tab.Screen>
       <Tab.Screen name="Settings">
         {(props) => <DepartmentSetings {...props} department={department} />}
@@ -263,6 +265,7 @@ const AppNavigator = () => {
       <Stack.Screen name="EditSubTask" component={EditSubTask} options={{ headerShown: false }} />
       <Stack.Screen name="EditProject" component={EditProject} options={{ headerShown: false }} />
       <Stack.Screen name="AddTimesheet" component={AddTimesheet} options={{ headerShown: false }} />
+      <Stack.Screen name="TimesheetProject" component={TimesheetProject} options={{ headerShown: false }} />
       {/* <Stack.Screen name="TimesheetViewPage" component={TimesheetViewPage} options={{ headerShown: false }} /> */}
     </Stack.Navigator>
   );

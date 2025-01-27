@@ -381,6 +381,51 @@ mssql.connect(dbConfig).then(pool => {
     });
 
 
+    app.post('/api/createtask', async (req, res) => {
+      const { taskName, projectId, dueDate, description } = req.body;
+    
+      if (!taskName || !projectId || !dueDate || !description) {
+        return res.status(400).json({
+          error: 'All fields are required: taskName, projectId, dueDate, and description.',
+        });
+      }
+    
+      const transaction = new mssql.Transaction();
+    
+      try {
+        await transaction.begin();
+    
+        const insertTaskQuery = `
+          INSERT INTO Task (TaskName, ProjectId, DueDate, Description)
+          OUTPUT INSERTED.TaskId
+          VALUES (@TaskName, @ProjectId, @DueDate, @Description)
+        `;
+    
+        const taskRequest = transaction.request();
+        taskRequest.input('TaskName', mssql.VarChar, taskName);
+        taskRequest.input('ProjectId', mssql.Int, projectId);
+        taskRequest.input('DueDate', mssql.DateTime, dueDate);
+        taskRequest.input('Description', mssql.VarChar, description);
+    
+        const taskResult = await taskRequest.query(insertTaskQuery);
+    
+        const taskId = taskResult.recordset[0].TaskId;
+    
+        await transaction.commit();
+    
+        res.status(201).json({
+          message: 'Task created successfully.',
+          taskId,
+        });
+      } catch (err) {
+        console.error('Error executing transaction:', err.message);
+    
+        await transaction.rollback();
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+
     app.post('/api/createsubtask', async (req, res) => {
       const { subTaskName, taskId, dueDate, description } = req.body;
 
@@ -671,6 +716,7 @@ mssql.connect(dbConfig).then(pool => {
     emp.Username,
     tser.ProjectId,
     proj.ProjectName,
+    proj.DeptId,
     ts.TimesheetId,
     ts.DateInfo,
     ts.StartTime,
@@ -914,23 +960,23 @@ JOIN
     });
 
     app.post('/api/calendar', async (req, res) => {
-      const { deptId } = req.body; 
-    
+      const { deptId } = req.body;
+
       if (!deptId) {
         return res.status(400).send('Department ID is required');
       }
-    
+
       try {
         const result = await pool.request()
-          .input('DeptId', deptId) 
+          .input('DeptId', deptId)
           .query(`
             SELECT ST.*, P.ProjectName
-            FROM SubTask ST
-            JOIN Task T ON ST.TaskId = T.TaskId
-            JOIN Project P ON T.ProjectId = P.ProjectId
-            WHERE P.DeptId = @DeptId AND ST.Status = 'Due' OR ST.Status='Ongoing'
+FROM SubTask ST
+JOIN Task T ON ST.TaskId = T.TaskId
+JOIN Project P ON T.ProjectId = P.ProjectId
+WHERE P.DeptId = @DeptId AND (ST.Status = 'Due' OR ST.Status = 'Ongoing');
           `);
-    
+
         res.status(200).json(result.recordset);
       } catch (err) {
         console.error('Error executing query:', err.message);
@@ -942,15 +988,15 @@ JOIN
 
     app.post('/api/workinghours', async (req, res) => {
       const { department } = req.body;
-    
+
       if (!department) {
         return res.status(400).json({ error: 'Department name is required.' });
       }
-    
+
       try {
         const result = await pool
           .request()
-          .input('Department',  mssql.NVarChar(200), department)
+          .input('Department', mssql.NVarChar(200), department)
           .query(`
             SELECT 
                 e.EmployeeId,
@@ -969,6 +1015,154 @@ JOIN
             ORDER BY 
                 e.EmployeeId, t.StartTime;
           `);
+
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.put('/api/approvesubtask/:id', async (req, res) => {
+      const { id } = req.params;
+      const { status, approval } = req.body;
+
+      const subtaskStatus = status || 'Finished';
+      const subtaskApproval = approval || 'Approved';
+
+      try {
+        const result = await pool.request()
+          .input('SubTaskId', mssql.Int, id)
+          .input('Status', mssql.NVarChar, subtaskStatus)
+          .input('Approval', mssql.NVarChar, subtaskApproval)
+          .query(`
+            UPDATE SubTask
+            SET Status = @Status, Approval = @Approval
+            WHERE SubTaskId = @SubTaskId
+          `);
+
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).send('SubTask status updated successfully');
+
+        } else {
+          res.status(404).send('SubTask not found');
+        }
+      } catch (err) {
+        console.error('Error updating SubTask status:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.put('/api/taskstatus/:id', async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const taskStatus = status || 'Finished';
+
+
+      try {
+        const result = await pool.request()
+          .input('TaskId', mssql.Int, id)
+          .input('Status', mssql.NVarChar, taskStatus)
+          .query(`
+            UPDATE Task
+            SET Status = @Status
+            WHERE TaskId = @TaskId
+          `);
+
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).send('Task status updated successfully');
+
+        } else {
+          res.status(404).send('Task not found');
+        }
+      } catch (err) {
+        console.error('Error updating Task status:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.get('/api/subtaskstatuses/:projectId', async (req, res) => {
+      const { projectId } = req.params;
+    
+      if (!projectId) {
+        return res.status(400).json({
+          error: 'ProjectId is required in the request parameters.',
+        });
+      }
+    
+      try {
+        const pool = await mssql.connect(dbConfig);
+    
+        const query = `
+          SELECT 
+            SubTask.SubTaskId, 
+            SubTask.SubTaskName, 
+            SubTask.Status, 
+            Project.ProjectId
+          FROM 
+            SubTask
+          INNER JOIN 
+            Task ON SubTask.TaskId = Task.TaskId
+          INNER JOIN 
+            Project ON Task.ProjectId = Project.ProjectId
+          WHERE 
+            Project.ProjectId = @ProjectId
+        `;
+    
+        const request = pool.request();
+        request.input('ProjectId', mssql.Int, projectId);
+    
+        const result = await request.query(query);
+    
+        res.status(200).json({
+          message: `Subtasks for ProjectId ${projectId}`,
+          subtasks: result.recordset,
+        });
+      } catch (err) {
+        console.error('Error fetching subtasks:', err.message);
+    
+        res.status(500).json({
+          error: 'An error occurred while fetching subtasks. Please try again later.',
+        });
+      }
+    });
+
+    app.post('/api/projecttimesheets', async (req, res) => {
+      const { projectId } = req.body;
+    
+      if (!projectId) {
+        return res.status(400).send('Project ID is required');
+      }
+    
+      try {
+        const result = await pool.request()
+          .input('ProjectId', projectId)
+          .query(`
+            SELECT 
+              Timesheet.TimesheetId, 
+              Timesheet.StartTime,
+              Timesheet.EndTime,
+              Timesheet.DateInfo, 
+              Timesheet.Description, 
+              SubTask.SubTaskId, 
+              SubTask.SubTaskName, 
+              Task.TaskId, 
+              Task.TaskName, 
+              Project.ProjectId, 
+              Project.ProjectName
+            FROM 
+              Timesheet
+            INNER JOIN 
+              SubTask ON Timesheet.SubTaskId = SubTask.SubTaskId
+            INNER JOIN 
+              Task ON SubTask.TaskId = Task.TaskId
+            INNER JOIN 
+              Project ON Task.ProjectId = Project.ProjectId
+            WHERE 
+              Project.ProjectId = @ProjectId
+            ORDER BY 
+              Timesheet.DateInfo;
+          `);
     
         res.status(200).json(result.recordset);
       } catch (err) {
@@ -979,13 +1173,12 @@ JOIN
 
 
 
-    
-    
-    
 
 
 
-    
+
+
+
 
 
 

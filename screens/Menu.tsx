@@ -64,11 +64,11 @@ const Menu = ({navigation}:{navigation:any}) => {
           imageSource={require('../assets/work-schedule.png')}
           onRightArrowPress={() => {navigation.navigate('WorkScheduleSettings')}}
         />
-        <MenuCard
+        {/* <MenuCard
           text="Projects"
           imageSource={require('../assets/project-icon.png')}
           onRightArrowPress={() => { }}
-        />
+        /> */}
 
         <View style={{ padding: 15 }}>
           <Text style={styles.labelText}>Account</Text>

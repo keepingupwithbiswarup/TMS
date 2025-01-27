@@ -25,6 +25,7 @@ type TimesheetEntry = {
     Username: string;
     ProjectId: number;
     ProjectName: string;
+    DeptId: number;
     TimesheetId: number;
     DateInfo: string;
     StartTime: string;
@@ -37,7 +38,14 @@ type TimesheetEntry = {
     TaskName: string;
 };
 
-const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
+interface DepartmentDetailsProps {
+    department: any;
+    route: any;
+    navigation: any;
+}
+
+
+const TimesheetViewPage: React.FC<DepartmentDetailsProps> = ({ navigation,department}) => {
     const [selectedDate, setSelectedDate] = useState(moment());
     const [timesheetData, setTimesheetData] = useState<TimesheetEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -45,8 +53,11 @@ const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
     const [isModalVisible, setModalVisible] = useState(false);
 
 
+
     const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
     const [timesheetId, setTimesheetId] = useState<number>(0);
+
+
 
     const getEmployeeId = async (): Promise<number> => {
         const user = await AsyncStorage.getItem('currentUser');
@@ -72,20 +83,23 @@ const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
     const fetchTimesheetData = async () => {
         setLoading(true);
         setError(null);
-
+    
         try {
             const response = await fetch(`http://${IpRoute}/api/timesheetdata`);
             if (!response.ok) {
                 throw new Error('Failed to fetch timesheet data');
             }
             const data: TimesheetEntry[] = await response.json();
-            setTimesheetData(data);
+    
+            const filteredData = data.filter(entry => entry.DeptId === department);
+            setTimesheetData(filteredData);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
+    
 
     useFocusEffect(
         useCallback(() => {
@@ -310,6 +324,7 @@ const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
                             renderItem={({ item: TimesheetEntry }) => <TimesheetCard item={item} onDelete={() => { handleDelete(item.TimesheetId) }} />}
                             renderHiddenItem={({ item }) => (
                                 <View style={styles.hiddenItem}>
+                                    {currentUserId == item.EmployeeId && 
                                     <TouchableOpacity
                                         style={{ padding: 12 }}
                                         onPress={() => handleDelete(item.TimesheetId)}
@@ -318,7 +333,7 @@ const TimesheetViewPage = ({ navigation }: { navigation: any }) => {
                                             style={{ height: 30, width: 30, tintColor: 'red' }}
                                             source={require('../assets/delete-icon.png')}
                                         />
-                                    </TouchableOpacity>
+                                    </TouchableOpacity>}
                                 </View>
                             )}
                             rightOpenValue={-75}

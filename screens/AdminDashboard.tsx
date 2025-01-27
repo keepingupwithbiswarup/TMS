@@ -98,9 +98,12 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
     const upcomingHolidays = [
         { date: '25 Dec 2024', name: "Christmas Day" },
         { date: '1 Jan 2025', name: "New Year's Day" },
-        { date: '14 Feb 2025', name: "Valentine's Day" },
+       
+        { date: '4 Jul 2025', name: "Independence Day (USA)" },
+        { date: '31 Dec 2025', name: "New Year's Eve" },
+        { date: '7 Apr 2025', name: "Easter Sunday" },
     ];
-
+    
   
 
     return (

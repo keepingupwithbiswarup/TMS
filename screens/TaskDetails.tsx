@@ -6,6 +6,7 @@ import { User } from '../utilities/types';
 import usePdfSource from '../utilities/usePdfSource';
 import CustomModal from '../components/CustomModal';
 import IpRoute from '../utilities/iproute';
+import { PieChart } from 'react-native-chart-kit';
 
 
 
@@ -52,6 +53,20 @@ type Project = {
   dueDate?: string;
 };
 
+interface Timesheet {
+  TimesheetId: number;
+  StartTime: string;
+  EndTime: string;
+  DateInfo: string;
+  Description: string;
+  SubTaskId: number;
+  SubTaskName: string;
+  TaskId: number;
+  TaskName: string;
+  ProjectId: number;
+  ProjectName: string;
+}
+
 
 
 
@@ -71,6 +86,13 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
   const [currTaskId, setCurrTaskId] = useState(0);
   const [currSubTaskId, setCurrSubTaskId] = useState(0);
 
+  const [taskCount, setTaskCount] = useState(0);
+  const [ongoingTaskCount, setOngoingTaskCount] = useState(0);
+  const [completedTaskCount, setCompletedTaskCount] = useState(0);
+  const [totalHours, setTotalHours] = useState<number>(0);
+
+
+
 
   const toggleSubtaskVisibility = (taskId: number) => {
     setVisibleSubtasks(prev => ({
@@ -78,6 +100,28 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       [taskId]: !prev[taskId],
     }));
   };
+
+  const getTaskStatus = (subtasks: Subtask[]) => {
+    let allFinished = true;
+    let someFinished = false;
+
+    for (let i = 0; i < subtasks.length; i++) {
+      if (subtasks[i].Status === 'Finished') {
+        someFinished = true;
+      } else {
+        allFinished = false;
+      }
+    }
+
+    if (allFinished) {
+      return 'Finished';
+    } else if (someFinished) {
+      return 'Ongoing';
+    } else {
+      return 'Due';
+    }
+  };
+
 
   const openPdf = (fileName: string) => {
     const newUri = `bundle-assets://${fileName}`;
@@ -92,7 +136,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     setTaskModalVisible(true);
     setCurrTaskId(taskId);
   };
-  const handleSubTaskDelete = (subTaskId:number) => {
+  const handleSubTaskDelete = (subTaskId: number) => {
     setSubTaskModalVisible(true);
     setCurrSubTaskId(subTaskId)
   };
@@ -114,12 +158,12 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       console.error('Project ID is missing');
       return;
     }
-  
+
     console.log('Attempting to delete Project ID:', projectId);
-  
+
     try {
       setProjectModalVisible(false);
-  
+
       const response = await fetch(`http://${IpRoute}/api/deleteproject`, {
         method: 'DELETE',
         headers: {
@@ -127,7 +171,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
         },
         body: JSON.stringify({ projectId }),
       });
-  
+
       if (response.ok) {
         const data = await response.text();
         console.log('Project deleted:', data);
@@ -139,18 +183,18 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       console.error('Error deleting project:', error);
     }
   };
-  
+
   const confirmTaskDeletion = async (taskId: number) => {
     if (!taskId) {
       console.error('Task ID is missing');
       return;
     }
-  
+
     console.log('Attempting to delete Task ID:', taskId);
-  
+
     try {
       setTaskModalVisible(false);
-  
+
       const response = await fetch(`http://${IpRoute}/api/deletetask`, {
         method: 'DELETE',
         headers: {
@@ -158,7 +202,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
         },
         body: JSON.stringify({ taskId }),
       });
-  
+
       if (response.ok) {
         const data = await response.text();
         console.log('Task deleted:', data);
@@ -170,18 +214,18 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       console.error('Error deleting task:', error);
     }
   };
-  
+
   const confirmSubTaskDeletion = async (subTaskId: number) => {
     if (!subTaskId) {
       console.error('Subtask ID is missing');
       return;
     }
-  
+
     console.log('Attempting to delete Subtask ID:', subTaskId);
-  
+
     try {
       setSubTaskModalVisible(false);
-  
+
       const response = await fetch(`http://${IpRoute}/api/deletesubtask`, {
         method: 'DELETE',
         headers: {
@@ -189,7 +233,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
         },
         body: JSON.stringify({ subTaskId }),
       });
-  
+
       if (response.ok) {
         const data = await response.text();
         console.log('Subtask deleted:', data);
@@ -201,29 +245,96 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       console.error('Error deleting subtask:', error);
     }
   };
-  
-
-  const [statistics, setStatistics] = useState([
-    { day: 'M', onTarget: 30, tasksTarget: 20, offTarget: 10 },
-    { day: 'T', onTarget: 40, tasksTarget: 25, offTarget: 15 },
-    { day: 'W', onTarget: 20, tasksTarget: 15, offTarget: 10 },
-    { day: 'T', onTarget: 50, tasksTarget: 30, offTarget: 20 },
-    { day: 'F', onTarget: 35, tasksTarget: 25, offTarget: 15 },
-    { day: 'S', onTarget: 25, tasksTarget: 20, offTarget: 5 },
-  ]);
 
 
+  // const [statistics, setStatistics] = useState([
+  //   { day: 'M', onTarget: 30, tasksTarget: 20, offTarget: 10 },
+  //   { day: 'T', onTarget: 40, tasksTarget: 25, offTarget: 15 },
+  //   { day: 'W', onTarget: 20, tasksTarget: 15, offTarget: 10 },
+  //   { day: 'T', onTarget: 50, tasksTarget: 30, offTarget: 20 },
+  //   { day: 'F', onTarget: 35, tasksTarget: 25, offTarget: 15 },
+  //   { day: 'S', onTarget: 25, tasksTarget: 20, offTarget: 5 },
+  // ]);
+
+  async function getProjectStatus(projectId: number): Promise<string> {
+    try {
+      if (!projectId) {
+        throw new Error('ProjectId is required to fetch the status.');
+      }
+      const numericProjectId = Number(projectId);
+
+      const response = await fetch(`http://${IpRoute}/api/subtaskstatuses/${numericProjectId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch subtasks.');
+      }
+
+      const data = await response.json();
+      const subtasks = data.subtasks;
+
+      let allFinished = true;
+      let allDue = true;
+
+      subtasks.forEach((subtask: { Status: string }) => {
+        if (subtask.Status !== 'Finished') {
+          allFinished = false;
+        }
+        if (subtask.Status !== 'Due') {
+          allDue = false;
+        }
+      });
+
+      if (allFinished) {
+        return 'Finished';
+      } else if (allDue) {
+        return 'Due';
+      } else {
+        return 'Ongoing';
+      }
+    } catch (error) {
+      console.error('Error fetching project status:', error);
+      return 'Due';
+    }
+  }
+
+
+
+  const projectdata = [
+    {
+      name: 'Done',
+      population: completedTaskCount,
+      color: '#4CAF50',
+    },
+    {
+      name: 'Ongoing',
+      population: ongoingTaskCount,
+      color: '#FFC94A',
+    },
+    {
+      name: 'Due',
+      population: taskCount - (completedTaskCount + ongoingTaskCount),
+      color: '#FF8383',
+    },
+  ];
 
 
 
 
 
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+
+
+
+
+  const formatTime = (decimalHours: number) => {
+    const totalMinutes = Math.floor(decimalHours * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const seconds = Math.round((decimalHours * 3600) % 60);
+
+    return `${String(hours).padStart(2, '0')} hrs ${String(minutes).padStart(2, '0')} mins`;
   };
 
   const fetchProjectData = async () => {
@@ -251,6 +362,32 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
       if (!project) {
         console.error('Project not found');
         return;
+      }
+
+      const projectTimesheetsResponse = await fetch(`http://${IpRoute}/api/projecttimesheets`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ projectId }),
+      });
+
+      if (!projectTimesheetsResponse.ok) {
+        console.error("Failed to fetch project timesheets:", projectTimesheetsResponse.statusText);
+      } else {
+
+        const data: Timesheet[] = await projectTimesheetsResponse.json();
+
+        const totalWorkingHours = data.reduce((total, timesheet) => {
+          const startTime = new Date(timesheet.StartTime);
+          const endTime = new Date(timesheet.EndTime);
+          const hoursWorked = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          return total + hoursWorked;
+        }, 0);
+
+        setTotalHours(totalWorkingHours);
+
+        console.log(`Total working hours: ${totalWorkingHours.toFixed(2)} hours`);
       }
 
       const projectTeams = allTeams.filter((item: any) => item.ProjectId == projectId);
@@ -286,7 +423,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
 
         const createdAt = project.CreatedAt;
-        console.log('createdAt:', createdAt);
+
 
         const createdDate = new Date(createdAt);
         if (isNaN(createdDate.getTime())) {
@@ -295,8 +432,9 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
           console.log('Valid createdAt date:', createdDate);
         }
 
-        const dueDate = new Date(createdDate);
-        dueDate.setDate(createdDate.getDate() + 90);
+        const dueDate = new Date(project.DueDate);
+
+
 
         const getFormattedDate = (date: Date) => {
           const day = date.getDate();
@@ -307,13 +445,34 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
           return `${day}${suffix} ${month}, ${year}`;
         };
+        const projectstatus = await getProjectStatus(projectId);
+
+        setTaskCount(tasksForProject.length);
+
+
+
+
 
         setProjectData({
           ...project,
           tasks: tasksWithSubtasks,
           dueDate: getFormattedDate(dueDate),
           teamMembers: projectTeam,
+          Status: projectstatus,
         });
+
+        setOngoingTaskCount(0);
+        setCompletedTaskCount(0);
+
+
+
+        for (let i = 0; i < tasksForProject.length; i++) {
+          if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Ongoing") {
+            setOngoingTaskCount((prevCount) => prevCount + 1);
+          } else if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Finished") {
+            setCompletedTaskCount((prevCount) => prevCount + 1);
+          }
+        }
       } else {
         console.error('Project not found!');
       }
@@ -335,9 +494,9 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     return () => clearInterval(interval);
   }, [projectId]);
 
-  const handleBarPress = (day: string, type: any, count: number) => {
-    Alert.alert(`${day} Statistics`, `${count} tasks (${type})`);
-  };
+  // const handleBarPress = (day: string, type: any, count: number) => {
+  //   Alert.alert(`${day} Statistics`, `${count} tasks (${type})`);
+  // };
 
 
 
@@ -345,39 +504,49 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     const isSubtaskVisible = visibleSubtasks[task.TaskId] || false;
 
 
+
     return (
       <View style={styles.taskCard}>
-  <View style={styles.taskTitleContainer}>
-    <View style={styles.rightSideContainer}>
-      <Image
-        source={task.Status === "Finished" ? require('../assets/tick.png') : require('../assets/checkbox.png')}
-        style={[styles.checkboxIcon, { tintColor: task.Status === "Finished" ? '#4CAF50' : '#666666' }]}
-      />
+        <View style={styles.taskTitleContainer}>
+          <View style={styles.rightSideContainer}>
+            <Image
+              source={
+                task.Subtasks && task.Subtasks.length > 0
+                  ? getTaskStatus(task.Subtasks) === "Finished"
+                    ? require('../assets/tick.png')
+                    : getTaskStatus(task.Subtasks) === "Ongoing"
+                      ? require('../assets/ongoing.png')
+                      : require('../assets/checkbox.png')
+                  : require('../assets/checkbox.png')
+              }
+              style={[styles.checkboxIcon, { tintColor: task.Subtasks && task.Subtasks.length > 0 && getTaskStatus(task.Subtasks) === "Finished" ? '#4CAF50' : '#666666' }]}
+            />
 
-      <TouchableOpacity onPress={() => toggleSubtaskVisibility(task.TaskId)}>
-        <Image
-          source={isSubtaskVisible ? require('../assets/up-arrow.png') : require('../assets/down-arrow.png')}
-          style={[styles.subarrowIcon, { tintColor: "black" }]}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => { navigation.navigate('EditTask', { taskId: task.TaskId }) }}>
-        <Image
-          source={require('../assets/editcard.png')}
-          style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, marginTop: 4 }]}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => handleTaskDelete(task.TaskId)} style={styles.iconButton}>
-        <Image
-          source={require('../assets/delete-icon.png')}
-          style={[styles.icon, { tintColor: "red", height: 23, width: 23 }]}
-        />
-      </TouchableOpacity>
-    </View>
 
-    <Text style={styles.taskTitle}>{index + 1}. {task.TaskName}</Text>
-  </View>
-  
-  <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
+            <TouchableOpacity onPress={() => toggleSubtaskVisibility(task.TaskId)}>
+              <Image
+                source={isSubtaskVisible ? require('../assets/up-arrow.png') : require('../assets/down-arrow.png')}
+                style={[styles.subarrowIcon, { tintColor: "black" }]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { navigation.navigate('EditTask', { taskId: task.TaskId }) }}>
+              <Image
+                source={require('../assets/editcard.png')}
+                style={[styles.subarrowIcon, { tintColor: "black", marginLeft: 5, marginTop: 4 }]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleTaskDelete(task.TaskId)} style={styles.iconButton}>
+              <Image
+                source={require('../assets/delete-icon.png')}
+                style={[styles.icon, { tintColor: "red", height: 23, width: 23 }]}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.taskTitle}>{index + 1}. {task.TaskName}</Text>
+        </View>
+
+        <Text style={{ padding: 1, color: "#7D7C7C", paddingVertical: 5 }}>{task.Description}</Text>
 
 
 
@@ -463,6 +632,8 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
           </View>
         </View>
 
+
+
       </View>
     );
   };
@@ -484,7 +655,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
     const remainingCount = teamMembers.length - 3;
 
     return (
-      <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers',{projectId}) }} style={styles.teamList}>
+      <TouchableOpacity onPress={() => { navigation.navigate('TeamMembers', { projectId }) }} style={styles.teamList}>
         {displayedMembers.map((member, index) => (
           <View key={index} style={styles.memberCircle}>
             <Text style={styles.memberInitial}>{member?.Username.charAt(0)}</Text>
@@ -545,10 +716,33 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
-          <View style={styles.badgeContainer}>
-            <Image source={require('../assets/play.png')} style={{ height: 25, width: 25, tintColor: 'white' }} />
-            <Text style={styles.badgeText}>In Progress</Text>
+          <View
+            style={[
+              styles.badgeContainer,
+              projectData.Status === 'Finished'
+                ? { backgroundColor: '#4CAF50' }
+                : projectData.Status === 'Ongoing'
+                  ? { backgroundColor: '#068FFF' }
+                  : { backgroundColor: '#F44336' },
+            ]}
+          >
+            <Image
+              source={
+                projectData.Status === 'Finished'
+                  ? require('../assets/tick.png')
+                  : projectData.Status === 'Ongoing'
+                    ? require('../assets/ongoing.png')
+                    : require('../assets/checkbox.png')
+              }
+              style={{
+                height: 25,
+                width: 25,
+                tintColor: 'white',
+              }}
+            />
+            <Text style={styles.badgeText}>{projectData.Status}</Text>
           </View>
+
           <Text style={styles.taskName}>{projectData.ProjectName}</Text>
         </View>
         <Text style={{ fontSize: 14, color: '#686D76', marginBottom: 8 }}>Description</Text>
@@ -596,11 +790,11 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
           <View style={styles.statContainer}>
             <Text style={styles.statLabel}>Total Working Hours</Text>
             <View style={styles.statValueContainer}>
-              <Text style={styles.statValue}>{formatTime(elapsedTime)}</Text>
-              <View style={styles.newbadgeContainer}>
+              <Text style={styles.statValue}>{formatTime(totalHours)}</Text>
+              {/* <View style={styles.newbadgeContainer}>
                 <Image source={require('../assets/up-arrow.png')} style={styles.uparrowIcon} />
                 <Text style={styles.percentage}>34%</Text>
-              </View>
+              </View> */}
             </View>
           </View>
 
@@ -608,11 +802,11 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
           <View style={[styles.statContainer, { borderLeftWidth: 0.7, borderColor: "#9AA6B2" }]}>
             <Text style={styles.statLabel}>Total Tasks Activity</Text>
             <View style={styles.statValueContainer}>
-              <Text style={styles.statValue}>5 Tasks</Text>
-              <View style={styles.badgeContainerDown}>
+              <Text style={styles.statValue}>{taskCount} Tasks</Text>
+              {/* <View style={styles.badgeContainerDown}>
                 <Image source={require('../assets/down-arrow.png')} style={styles.downarrowIcon} />
                 <Text style={styles.percentageDown}>14%</Text>
-              </View>
+              </View> */}
             </View>
           </View>
         </View>
@@ -622,24 +816,24 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
           <View style={[styles.card, styles.inProgressCard]}>
             <Image
-              source={require('../assets/arrow-icon.png')}
+              source={require('../assets/grid.png')}
               style={styles.arrowIcon}
             />
 
-            <Text style={styles.cardNumber}>4</Text>
+            <Text style={styles.cardNumber}>{ongoingTaskCount}</Text>
             <Text style={styles.cardLabel}>Ongoing Tasks</Text>
           </View>
           <View style={[styles.card, styles.completedCard]}>
             <Image
-              source={require('../assets/arrow-icon.png')}
+              source={require('../assets/grid.png')}
               style={styles.arrowIcon}
             />
-            <Text style={styles.cardNumber}>1</Text>
+            <Text style={styles.cardNumber}>{completedTaskCount}</Text>
             <Text style={styles.cardLabel}>Tasks Completed</Text>
           </View>
         </View>
 
-        <View style={styles.statisticsContainer}>
+        {/* <View style={styles.statisticsContainer}>
           <Text style={styles.statisticsTitle}>Project Statistics</Text>
 
 
@@ -668,6 +862,36 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
             <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#000' }]} /><Text style={{ fontSize: 12 }}>Tasks Target</Text></View>
             <View style={styles.legendItem}><View style={[styles.legendColor, { backgroundColor: '#d32f2f' }]} /><Text style={{ fontSize: 12 }}>Off Target</Text></View>
           </View>
+        </View> */}
+
+        <View style={{ marginTop: 20 }}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tast Status</Text>
+            <Image source={require('../assets/arrow-icon.png')} style={styles.arrowIcon} />
+          </View>
+          <View style={styles.divider} />
+          <PieChart
+            data={projectdata}
+            width={Dimensions.get('window').width - 45}
+            height={200}
+            chartConfig={{
+              backgroundColor: 'white',
+              backgroundGradientFrom: 'white',
+              backgroundGradientTo: 'white',
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 10,
+              },
+            }}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            style={{
+              marginVertical: 5,
+              borderRadius: 10,
+            }}
+            hasLegend={true}
+          />
         </View>
 
         <Text style={{
@@ -777,6 +1001,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#C62E2E',
     borderRadius: 3,
     marginVertical: 2,
+  },
+  divider: {
+    marginHorizontal: 15,
+    marginVertical: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingTop: 15,
   },
   buttonContainer: {
     marginTop: 5,
