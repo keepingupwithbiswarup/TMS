@@ -258,46 +258,67 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
   async function getProjectStatus(projectId: number): Promise<string> {
     try {
-      if (!projectId) {
-        throw new Error('ProjectId is required to fetch the status.');
-      }
-      const numericProjectId = Number(projectId);
-
-      const response = await fetch(`http://${IpRoute}/api/subtaskstatuses/${numericProjectId}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch subtasks.');
-      }
-
-      const data = await response.json();
-      const subtasks = data.subtasks;
-
-      let allFinished = true;
-      let allDue = true;
-
-      subtasks.forEach((subtask: { Status: string }) => {
-        if (subtask.Status !== 'Finished') {
-          allFinished = false;
+        if (!projectId) {
+            throw new Error('ProjectId is required to fetch the status.');
         }
-        if (subtask.Status !== 'Due') {
-          allDue = false;
-        }
-      });
+        const numericProjectId = Number(projectId);
 
-      if (allFinished) {
-        return 'Finished';
-      } else if (allDue) {
-        return 'Due';
-      } else {
-        return 'Ongoing';
-      }
+        const response = await fetch(`http://${IpRoute}/api/subtaskstatuses/${numericProjectId}`);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch subtasks.');
+        }
+
+        const data = await response.json();
+        const subtasks = data.subtasks;
+
+        const status = determineStatus(subtasks);
+        await updateProjectStatus(numericProjectId, status);
+
+        return status
+
     } catch (error) {
-      console.error('Error fetching project status:', error);
-      return 'Due';
+        console.error('Error fetching project status:', error);
+        return 'Due';
     }
-  }
+}
 
+const determineStatus = (subtasks: Subtask[]): string => {
+    if (subtasks.length === 0) return 'Due'; 
+
+    let allFinished = true;
+    let someFinished = false;
+
+    subtasks.forEach((subtask) => {
+        if (subtask.Status === 'Finished') {
+            someFinished = true;
+        } else {
+            allFinished = false;
+        }
+    });
+
+    if (allFinished) return 'Finished';
+    if (someFinished) return 'Ongoing';
+    return 'Due';
+};
+
+async function updateProjectStatus(projectId: number, status: string) {
+    try {
+        const response = await fetch(`http://${IpRoute}/api/projectstatusupdate/${projectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update project status.');
+        }
+        console.log(`Project ${projectId} status updated to: ${status}`);
+    } catch (error) {
+        console.error('Error updating project status:', error);
+    }
+}
 
 
   const projectdata = [

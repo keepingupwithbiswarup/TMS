@@ -113,28 +113,50 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
             const data = await response.json();
             const subtasks = data.subtasks;
 
-            let allFinished = true;
-            let allDue = true;
+            const status = determineStatus(subtasks);
+            await updateProjectStatus(numericProjectId, status);
 
-            subtasks.forEach((subtask: { Status: string }) => {
-                if (subtask.Status !== 'Finished') {
-                    allFinished = false;
-                }
-                if (subtask.Status !== 'Due') {
-                    allDue = false;
-                }
-            });
-
-            if (allFinished) {
-                return 'Finished';
-            } else if (allDue) {
-                return 'Due';
-            } else {
-                return 'Ongoing';
-            }
+            return status
+    
         } catch (error) {
             console.error('Error fetching project status:', error);
             return 'Due';
+        }
+    }
+
+    const determineStatus = (subtasks: Subtask[]): string => {
+        if (subtasks.length === 0) return 'Due'; 
+    
+        let allFinished = true;
+        let someFinished = false;
+    
+        subtasks.forEach((subtask) => {
+            if (subtask.Status === 'Finished') {
+                someFinished = true;
+            } else {
+                allFinished = false;
+            }
+        });
+    
+        if (allFinished) return 'Finished';
+        if (someFinished) return 'Ongoing';
+        return 'Due';
+    };
+    
+    async function updateProjectStatus(projectId: number, status: string) {
+        try {
+            const response = await fetch(`http://${IpRoute}/api/projectstatusupdate/${projectId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status }),
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to update project status.');
+            }
+            console.log(`Project ${projectId} status updated to: ${status}`);
+        } catch (error) {
+            console.error('Error updating project status:', error);
         }
     }
 
@@ -517,11 +539,46 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 setOngoingTaskCount(0);
                 setCompletedTaskCount(0);
 
-
-                for (let i = 0; i < tasksForProject.length; i++) {
-                    if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Ongoing") {
+                const updateTaskStatus = async (task: any) => {
+                    let allFinished = true;
+                    let someFinished = false;
+            
+                    for (let i = 0; i < task.Subtasks.length; i++) {
+                        if (task.Subtasks[i].Status === 'Finished') {
+                            someFinished = true;
+                        } else {
+                            allFinished = false;
+                        }
+                    }
+            
+                    let newStatus = 'Due';
+                    if (allFinished) {
+                        newStatus = 'Finished';
+                    } else if (someFinished) {
+                        newStatus = 'Ongoing';
+                    }
+            
+                    try {
+                        await fetch(`http://${IpRoute}/api/taskstatus/${task.TaskId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: newStatus }),
+                        });
+            
+                        return newStatus;
+                    } catch (error) {
+                        console.error(`Error updating task ${task.TaskId} status:`, error);
+                        return 'Due';
+                    }
+                };
+            
+                for (let i = 0; i < tasksWithSubtasks.length; i++) {
+                    const task = tasksWithSubtasks[i];
+                    const taskStatus = await updateTaskStatus(task);
+            
+                    if (taskStatus === "Ongoing") {
                         setOngoingTaskCount((prevCount) => prevCount + 1);
-                    } else if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Finished") {
+                    } else if (taskStatus === "Finished") {
                         setCompletedTaskCount((prevCount) => prevCount + 1);
                     }
                 }

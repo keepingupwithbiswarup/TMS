@@ -47,6 +47,15 @@ mssql.connect(dbConfig).then(pool => {
         res.status(500).send('Internal Server Error');
       }
     });
+    app.get('/api/departmentpopulation', async (req, res) => {
+      try {
+        const result = await pool.request().query('select Department ,COUNT(*) as Population from Employees Group by Department');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
     app.get('/api/projects', async (req, res) => {
       try {
         const result = await pool.request().query('SELECT * FROM Project');
@@ -383,43 +392,43 @@ mssql.connect(dbConfig).then(pool => {
 
     app.post('/api/createtask', async (req, res) => {
       const { taskName, projectId, dueDate, description } = req.body;
-    
+
       if (!taskName || !projectId || !dueDate || !description) {
         return res.status(400).json({
           error: 'All fields are required: taskName, projectId, dueDate, and description.',
         });
       }
-    
+
       const transaction = new mssql.Transaction();
-    
+
       try {
         await transaction.begin();
-    
+
         const insertTaskQuery = `
           INSERT INTO Task (TaskName, ProjectId, DueDate, Description)
           OUTPUT INSERTED.TaskId
           VALUES (@TaskName, @ProjectId, @DueDate, @Description)
         `;
-    
+
         const taskRequest = transaction.request();
         taskRequest.input('TaskName', mssql.VarChar, taskName);
         taskRequest.input('ProjectId', mssql.Int, projectId);
         taskRequest.input('DueDate', mssql.DateTime, dueDate);
         taskRequest.input('Description', mssql.VarChar, description);
-    
+
         const taskResult = await taskRequest.query(insertTaskQuery);
-    
+
         const taskId = taskResult.recordset[0].TaskId;
-    
+
         await transaction.commit();
-    
+
         res.status(201).json({
           message: 'Task created successfully.',
           taskId,
         });
       } catch (err) {
         console.error('Error executing transaction:', err.message);
-    
+
         await transaction.rollback();
         res.status(500).json({ error: 'Internal Server Error' });
       }
@@ -1083,16 +1092,16 @@ WHERE P.DeptId = @DeptId AND (ST.Status = 'Due' OR ST.Status = 'Ongoing');
 
     app.get('/api/subtaskstatuses/:projectId', async (req, res) => {
       const { projectId } = req.params;
-    
+
       if (!projectId) {
         return res.status(400).json({
           error: 'ProjectId is required in the request parameters.',
         });
       }
-    
+
       try {
         const pool = await mssql.connect(dbConfig);
-    
+
         const query = `
           SELECT 
             SubTask.SubTaskId, 
@@ -1108,32 +1117,89 @@ WHERE P.DeptId = @DeptId AND (ST.Status = 'Due' OR ST.Status = 'Ongoing');
           WHERE 
             Project.ProjectId = @ProjectId
         `;
-    
+
         const request = pool.request();
         request.input('ProjectId', mssql.Int, projectId);
-    
+
         const result = await request.query(query);
-    
+
         res.status(200).json({
           message: `Subtasks for ProjectId ${projectId}`,
           subtasks: result.recordset,
         });
       } catch (err) {
         console.error('Error fetching subtasks:', err.message);
-    
+
         res.status(500).json({
           error: 'An error occurred while fetching subtasks. Please try again later.',
         });
       }
     });
 
+    app.put('/api/projectstatusupdate/:id', async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).send('Status is required');
+      }
+
+      try {
+        const result = await pool.request()
+          .input('ProjectId', mssql.Int, id)
+          .input('Status', mssql.NVarChar, status)
+          .query(`
+                  UPDATE Project
+                  SET Status = @Status
+                  WHERE ProjectId = @ProjectId
+              `);
+
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).send('Project status updated successfully');
+        } else {
+          res.status(404).send('Project not found');
+        }
+      } catch (err) {
+        console.error('Error updating Project status:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.get('/api/trackedhours', async (req, res) => {
+      try {
+        const result = await pool.request().query(`SELECT
+    e.Department,
+    COALESCE(SUM(DATEDIFF(MINUTE, t.StartTime, t.EndTime) / 60.0), 0) AS TotalWorkingHours
+FROM Employees e
+LEFT JOIN TimesheetEmpRel ter ON e.EmployeeId = ter.EmployeeId
+LEFT JOIN Timesheet t ON ter.TimesheetId = t.TimesheetId
+where e.Department is not null
+GROUP BY e.Department
+ORDER BY TotalWorkingHours DESC;`);
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/deptprojectcount', async (req, res) => {
+      try {
+        const result = await pool.request().query(`select DeptName,Count(*) as ProjectCount from Project left join Departments on Project.DeptId = Departments.DeptId group by DeptName;`);
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+
     app.post('/api/projecttimesheets', async (req, res) => {
       const { projectId } = req.body;
-    
+
       if (!projectId) {
         return res.status(400).send('Project ID is required');
       }
-    
+
       try {
         const result = await pool.request()
           .input('ProjectId', projectId)
@@ -1163,7 +1229,6 @@ WHERE P.DeptId = @DeptId AND (ST.Status = 'Due' OR ST.Status = 'Ongoing');
             ORDER BY 
               Timesheet.DateInfo;
           `);
-    
         res.status(200).json(result.recordset);
       } catch (err) {
         console.error('Error executing query:', err.message);
