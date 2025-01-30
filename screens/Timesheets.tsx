@@ -170,7 +170,7 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                 </View>
 
                 <View style={styles.cardContainer}>
-                    <TouchableOpacity onPress={() => navigation.navigate('TimesheetProject', { projectId:item.ProjectId,taskId:item.TaskId, subtaskId:item.SubTaskId })}>
+                    <TouchableOpacity onPress={() => navigation.navigate('TimesheetProject', { projectId:item.ProjectId,taskId:item.TaskId, subtaskId:item.SubTaskId,timesheetId:item.TimesheetId })}>
                     <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Text style={styles.textBold}>{item.ProjectName}</Text>
                         <TouchableOpacity onPress={() => { openTimesheetUpdateModal(item.TimesheetId) }}><Image source={require('../assets/pencil-icon.png')} style={{ width: 20, height: 20, position: "relative", right: 0 }} /></TouchableOpacity> 

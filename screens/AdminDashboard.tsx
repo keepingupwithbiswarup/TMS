@@ -11,6 +11,7 @@ import DepartmentBarChart from '../components/DepartmentBarChart'
 
 
 import LineChartDept from '../components/LineChartDept'
+import { BarChart, RadarChart } from 'react-native-gifted-charts'
 interface DepartmentPopulation {
     Department: string;
     Population: number;
@@ -21,10 +22,16 @@ interface TrackedHours {
     TotalWorkingHours: number;
 }
 
-interface ProjectCount{
+interface ProjectCount {
     DeptName: string;
     ProjectCount: number;
 }
+
+interface ApprovalTimesheets {
+    Approved: number;
+    Unapproved: number;
+}
+
 
 const AdminDashboard = ({ navigation }: { navigation: any }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -32,6 +39,12 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
     const [error, setError] = useState<string | null>(null);
     const [projects, setProjects] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+
+    const [approvalTimesheets, setApprovalTimesheets] = useState<ApprovalTimesheets>({
+        Approved: 0,
+        Unapproved: 0,
+    });
+
 
     const [projectStatusCounts, setProjectStatusCounts] = useState({
         Finished: 0,
@@ -42,6 +55,10 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
     const [deptPopulation, setDepartmentPopulation] = useState<DepartmentPopulation[]>([]);
     const [trackedHours, setTrackedHours] = useState<TrackedHours[]>([]);
     const [projectsCount, setProjectsCount] = useState<ProjectCount[]>([]);
+
+    
+
+
 
     const checkUser = async () => {
         const currentUser = await AsyncStorage.getItem('currentUser');
@@ -73,15 +90,20 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
             const trackedHours = await fetch(`http://${IpRoute}/api/trackedhours`);
             const trackedHoursData = await trackedHours.json();
             setTrackedHours(trackedHoursData);
+
+            const approvalTimesheets = await fetch(`http://${IpRoute}/api/utimesheetcount`);
+            const approvalTimesheetsData = await approvalTimesheets.json();
+            setApprovalTimesheets(approvalTimesheetsData);
             // console.log(trackedHoursData);
 
             const projectCount = await fetch(`http://${IpRoute}/api/deptprojectcount`);
-        const projectCountData = await projectCount.json();
-        if (projectCountData) {
-            setProjectsCount(projectCountData);
-        }
-
+            const projectCountData = await projectCount.json();
+            if (projectCountData) {
+                setProjectsCount(projectCountData);
+            }
             
+
+
 
             const projectsWithStatus = await Promise.all(
                 data.map(async (project: any) => {
@@ -116,17 +138,23 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
 
     useFocusEffect(
         useCallback(() => {
-            
-    
-            fetchData();
-        }, [])); 
 
-        useEffect(() => {
-            if (projectsCount) {
-                console.log("project count", projectsCount);
-            }
-        }, [projectsCount]);
-    
+
+            fetchData();
+        }, []));
+
+    useEffect(() => {
+        if (projectsCount) {
+            console.log("project count", projectsCount);
+        }
+    }, [projectsCount]);
+
+    useEffect(() => {
+        if (approvalTimesheets) {
+            console.log("approval timesheets", approvalTimesheets);
+        }
+    }, [approvalTimesheets])
+
 
     const getProjectStatus = async (projectId: number): Promise<string> => {
         try {
@@ -175,6 +203,8 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
     //     }, [])
     // );
 
+
+
     if (loading) {
 
         return (
@@ -192,9 +222,9 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
     //     out: 1,
     // };
 
-    console.log("hi",trackedHours);
+    console.log("hi", trackedHours);
 
-    const labels = trackedHours.map(dept => dept.Department?.trim() || 'Unknown'); 
+    const labels = trackedHours.map(dept => dept.Department?.trim() || 'Unknown');
 
     const workingHours = trackedHours.map(dept => dept.TotalWorkingHours || 0);
 
@@ -214,14 +244,22 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
         legend: ['Working Hours'],
     };
 
-    
+
+    const barchartdata = [
+        { value: approvalTimesheets.Approved || 0, frontColor: 'white', gradientColor: '#005B41', spacing: 40, label: 'Approved' },
+        { value: approvalTimesheets.Unapproved || 0, frontColor: 'white', gradientColor: '#ED2B2A', spacing: 50, label: 'Unapproved' },
+    ]
 
 
 
-    const barChartData = projectsCount.map(item => ({
-        label: item.DeptName,   
-        value: item.ProjectCount 
-      }));
+
+
+
+
+    // const barChartData = projectsCount.map(item => ({
+    //     label: item.DeptName,
+    //     value: item.ProjectCount
+    // }));
 
 
 
@@ -234,6 +272,16 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
         { date: '31 Dec 2025', name: "New Year's Eve" },
         { date: '7 Apr 2025', name: "Easter Sunday" },
     ];
+
+    const maxChartValue = Math.ceil(
+        Math.max(approvalTimesheets?.Approved || 0, approvalTimesheets?.Unapproved || 0)
+    );
+    const noOfSections = 10;
+    const stepValue = Math.ceil(maxChartValue / noOfSections);
+    const yAxisLabels = Array.from({ length: noOfSections + 1 }, (_, i) =>
+        (i * stepValue).toString()
+    );
+
 
 
 
@@ -388,8 +436,59 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
 
 
                     <LineChartDept
-        data={projectsCount}
-      />
+                        data={projectsCount}
+                    />
+                    <View style={styles.card}>
+                        <View
+                            style={{
+                                margin: 10,
+                                padding: 10,
+                                borderRadius: 20,
+                                backgroundColor: 'white',
+                            }}>
+                            <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: "center", color: "#333" }}>
+                                Timesheet Status Tracking
+                            </Text>
+                            <Text style={{
+                                fontSize: 13,
+                                color: "#888",
+                                marginBottom: 16, textAlign: "center", paddingBottom: 15, paddingTop: 10
+                            }}>Approved and Pending Timesheets can be tracked here</Text>
+                            <View style={{ padding: 20, alignItems: 'center', justifyContent: "center", alignContent: "center" }}>
+                                {barchartdata.length > 0 ? (
+                                    <BarChart
+                                        data={barchartdata}
+                                        barWidth={20}
+                                        initialSpacing={20}
+                                        spacing={40}
+                                        barBorderRadius={0}
+                                        showGradient
+                                        yAxisThickness={1}
+                                        xAxisType={'solid'}
+                                        xAxisColor={'gray'}
+                                        yAxisColor={'gray'}
+                                        yAxisTextStyle={{ color: 'gray', fontSize: 12 }}
+                                        stepValue={stepValue} // Dynamic step value
+                                        maxValue={maxChartValue} // Dynamic max value
+                                        noOfSections={noOfSections} // Dynamic sections count
+                                        yAxisLabelTexts={yAxisLabels}
+                                        // lineConfig={{
+                                        //     color: '#F29C6E',
+                                        //     thickness: 1,
+                                        //     curved: true,
+                                        //     hideDataPoints: true,
+                                        //     initialSpacing: 20,
+                                        // }}
+                                        xAxisLabelTextStyle={{ color: 'gray', fontSize: 12 }}
+                                    />
+                                ) : (
+                                    <Text style={{ color: 'gray', textAlign: 'center' }}>No data available</Text>
+                                )}
+
+
+                            </View>
+                        </View>
+                    </View>
 
 
 

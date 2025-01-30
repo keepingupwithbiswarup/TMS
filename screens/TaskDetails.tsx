@@ -486,21 +486,56 @@ async function updateProjectStatus(projectId: number, status: string) {
         setCompletedTaskCount(0);
 
 
-
-        for (let i = 0; i < tasksForProject.length; i++) {
-          if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Ongoing") {
-            setOngoingTaskCount((prevCount) => prevCount + 1);
-          } else if (getTaskStatus(tasksWithSubtasks[i].Subtasks) == "Finished") {
-            setCompletedTaskCount((prevCount) => prevCount + 1);
+        const updateTaskStatus = async (task: any) => {
+          let allFinished = true;
+          let someFinished = false;
+  
+          for (let i = 0; i < task.Subtasks.length; i++) {
+              if (task.Subtasks[i].Status === 'Finished') {
+                  someFinished = true;
+              } else {
+                  allFinished = false;
+              }
           }
-        }
-      } else {
-        console.error('Project not found!');
+  
+          let newStatus = 'Due';
+          if (allFinished) {
+              newStatus = 'Finished';
+          } else if (someFinished) {
+              newStatus = 'Ongoing';
+          }
+  
+          try {
+              await fetch(`http://${IpRoute}/api/taskstatus/${task.TaskId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: newStatus }),
+              });
+  
+              return newStatus;
+          } catch (error) {
+              console.error(`Error updating task ${task.TaskId} status:`, error);
+              return 'Due';
+          }
+      };
+  
+      for (let i = 0; i < tasksWithSubtasks.length; i++) {
+          const task = tasksWithSubtasks[i];
+          const taskStatus = await updateTaskStatus(task);
+  
+          if (taskStatus === "Ongoing") {
+              setOngoingTaskCount((prevCount) => prevCount + 1);
+          } else if (taskStatus === "Finished") {
+              setCompletedTaskCount((prevCount) => prevCount + 1);
+          }
       }
-    } catch (error) {
-      console.error('Error fetching project data:', error);
-    }
-  };
+  } else {
+      console.error('Project not found!');
+  }
+} catch (error) {
+  console.error('Error fetching project data:', error);
+}
+};
 
 
   useEffect(() => {

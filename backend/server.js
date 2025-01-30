@@ -1034,33 +1034,55 @@ WHERE P.DeptId = @DeptId AND (ST.Status = 'Due' OR ST.Status = 'Ongoing');
 
     app.put('/api/approvesubtask/:id', async (req, res) => {
       const { id } = req.params;
-      const { status, approval } = req.body;
+      const { status, approval, timesheetId } = req.body;
 
       const subtaskStatus = status || 'Finished';
       const subtaskApproval = approval || 'Approved';
 
       try {
-        const result = await pool.request()
+        const transaction = new mssql.Transaction(pool);
+        await transaction.begin();
+
+        const request = new mssql.Request(transaction);
+
+        const subtaskResult = await request
           .input('SubTaskId', mssql.Int, id)
           .input('Status', mssql.NVarChar, subtaskStatus)
           .input('Approval', mssql.NVarChar, subtaskApproval)
           .query(`
-            UPDATE SubTask
-            SET Status = @Status, Approval = @Approval
-            WHERE SubTaskId = @SubTaskId
-          `);
+                  UPDATE SubTask
+                  SET Status = @Status, Approval = @Approval
+                  WHERE SubTaskId = @SubTaskId
+              `);
 
-        if (result.rowsAffected[0] > 0) {
-          res.status(200).send('SubTask status updated successfully');
-
-        } else {
-          res.status(404).send('SubTask not found');
+        if (subtaskResult.rowsAffected[0] === 0) {
+          await transaction.rollback();
+          return res.status(404).send('SubTask not found');
         }
+
+        const timesheetResult = await request
+          .input('TimesheetId', mssql.Int, timesheetId)
+          .input('TStatus', mssql.NVarChar, subtaskApproval)
+          .query(`
+                  UPDATE Timesheet
+                  SET Status = @TStatus
+                  WHERE TimesheetId = @TimesheetId
+              `);
+
+        if (timesheetResult.rowsAffected[0] === 0) {
+          await transaction.rollback();
+          return res.status(404).send('Timesheet not found');
+        }
+
+        await transaction.commit();
+        res.status(200).send('SubTask and Timesheet status updated successfully');
+
       } catch (err) {
-        console.error('Error updating SubTask status:', err.message);
+        console.error('Error updating SubTask or Timesheet status:', err.message);
         res.status(500).send('Internal Server Error');
       }
     });
+
     app.put('/api/taskstatus/:id', async (req, res) => {
       const { id } = req.params;
       const { status } = req.body;
@@ -1235,6 +1257,114 @@ ORDER BY TotalWorkingHours DESC;`);
         res.status(500).send('Internal Server Error');
       }
     });
+
+
+    app.get('/api/utimesheetcount', async (req, res) => {
+      try {
+        const result = await pool.request().query(`
+              SELECT 
+    SUM(CASE WHEN Status = 'Approved' THEN 1 ELSE 0 END) AS Approved,
+    SUM(CASE WHEN Status = 'Unapproved' THEN 1 ELSE 0 END) AS Unapproved
+FROM Timesheet;
+          `);
+
+        res.status(200).json(result.recordset[0]);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.get('/api/employeeworkinghrs/:employeeId', async (req, res) => {
+      const { employeeId } = req.params;
+    
+      try {
+        const result = await pool.request()
+          .input('EmployeeId', mssql.Int, employeeId)
+          .query(`
+            SELECT 
+    Employees.Username,
+    SUM(DATEDIFF(MINUTE, Timesheet.StartTime, Timesheet.EndTime)) / 60.0 AS TotalWorkingHours
+FROM Timesheet
+JOIN TimesheetEmpRel ON Timesheet.TimesheetId = TimesheetEmpRel.TimesheetId
+JOIN Employees ON TimesheetEmpRel.EmployeeId = Employees.EmployeeId
+WHERE Employees.EmployeeId = @EmployeeId
+GROUP BY Employees.Username
+          `);
+    
+        if (result.recordset.length > 0) {
+          res.status(200).json(result.recordset); 
+        } 
+        if (result.recordset.length === 0) {
+          return res.status(404).json({ message: 'No timesheet data found for this employee.' });
+        }
+      } catch (err) {
+        console.error('Error fetching timesheet data:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/employeetotalprojects/:employeeId', async (req, res) => {
+      const { employeeId } = req.params;
+      
+      try {
+        const result = await pool.request()
+          .input('EmployeeId', mssql.Int, employeeId)
+          .query(`
+           
+ SELECT 
+          p.ProjectName,p.Status
+        FROM TeamMembers tm
+        JOIN Team t ON tm.TeamId = t.TeamId
+        JOIN Project p ON t.ProjectId = p.ProjectId
+        WHERE tm.EmployeeId = @EmployeeId
+      
+          `);
+        
+        if (result.recordset.length > 0) {
+          return res.status(200).json(result.recordset); 
+        }
+        
+        return res.status(404).json({ message: 'No Projects Assigned' });
+    
+      } catch (err) {
+        console.error('Error fetching employee project data:', err.message);
+        return res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/employeetimesheetcountbydate/:employeeId', async (req, res) => {
+      const { employeeId } = req.params;
+      
+      try {
+        const result = await pool.request()
+          .input('EmployeeId', mssql.Int, employeeId)
+          .query(`
+           
+ SELECT 
+    CONVERT(DATE, t.DateInfo) AS Date, 
+    COUNT(t.TimesheetId) AS TimesheetCount
+FROM Timesheet t
+JOIN TimesheetEmpRel ter ON t.TimesheetId = ter.TimesheetId
+WHERE ter.EmployeeId = @EmployeeId
+AND t.DateInfo >= DATEADD(DAY, -7, GETDATE())
+GROUP BY CONVERT(DATE, t.DateInfo)
+ORDER BY Date DESC
+      
+          `);
+        
+        if (result.recordset.length > 0) {
+          return res.status(200).json(result.recordset); 
+        }
+        
+        return res.status(404).json({ message: 'No Timesheets Found' });
+    
+      } catch (err) {
+        console.error('Error fetching employee timesheets:', err.message);
+        return res.status(500).send('Internal Server Error');
+      }
+    });
+    
+    
+
 
 
 

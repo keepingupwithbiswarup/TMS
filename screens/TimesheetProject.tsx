@@ -76,7 +76,7 @@ interface Timesheet {
 
 
 const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }) => {
-    const { projectId, taskId, subtaskId } = route.params;
+    const { projectId, taskId, subtaskId, timesheetId} = route.params;
 
     const [projectData, setProjectData] = useState<Project | null>(null);
     const [isDescriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -328,6 +328,8 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 body: JSON.stringify({
                     status: 'Finished',
                     approval: 'Approved',
+                    timesheetId: timesheetId,
+
                 }),
             });
 
@@ -352,6 +354,7 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 body: JSON.stringify({
                     status: 'Due',
                     approval: 'Unapproved',
+                    timesheetId: timesheetId,
                 }),
             });
 
