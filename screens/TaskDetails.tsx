@@ -495,53 +495,60 @@ async function updateProjectStatus(projectId: number, status: string) {
 
 
         const updateTaskStatus = async (task: any) => {
-          let allFinished = true;
-          let someFinished = false;
-  
-          for (let i = 0; i < task.Subtasks.length; i++) {
-            const subtaskStatus = task.Subtasks[i].Status;
-    
-            if (subtaskStatus === 'Finished') {
-                someFinished = true;
-            } else {
-                allFinished = false; 
-                if (subtaskStatus === 'Ongoing') {
-                    someFinished = true; 
-                }
-            }
-        }
-  
           let newStatus = 'Due';
-          if (allFinished) {
-              newStatus = 'Finished';
-          } else if (someFinished) {
-              newStatus = 'Ongoing';
+      
+          if (task.Subtasks.length === 0) {
+              // If there are no subtasks, mark the task as "Due"
+              newStatus = 'Due';
+          } else {
+              let allFinished = true;
+              let someFinished = false;
+      
+              for (let i = 0; i < task.Subtasks.length; i++) {
+                  const subtaskStatus = task.Subtasks[i].Status;
+      
+                  if (subtaskStatus === 'Finished') {
+                      someFinished = true;
+                  } else {
+                      allFinished = false;
+                      if (subtaskStatus === 'Ongoing') {
+                          someFinished = true;
+                      }
+                  }
+              }
+      
+              if (allFinished) {
+                  newStatus = 'Finished';
+              } else if (someFinished) {
+                  newStatus = 'Ongoing';
+              }
           }
-  
+      
           try {
               await fetch(`http://${IpRoute}/api/taskstatus/${task.TaskId}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: newStatus }),
               });
-  
+      
               return newStatus;
           } catch (error) {
               console.error(`Error updating task ${task.TaskId} status:`, error);
               return 'Due';
           }
       };
-  
+      
       for (let i = 0; i < tasksWithSubtasks.length; i++) {
           const task = tasksWithSubtasks[i];
           const taskStatus = await updateTaskStatus(task);
-  
+      
           if (taskStatus === "Ongoing") {
               setOngoingTaskCount((prevCount) => prevCount + 1);
           } else if (taskStatus === "Finished") {
               setCompletedTaskCount((prevCount) => prevCount + 1);
           }
       }
+      
   } else {
       console.error('Project not found!');
   }

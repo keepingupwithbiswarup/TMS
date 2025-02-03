@@ -1,5 +1,5 @@
 import { ActivityIndicator, Alert, Image, Modal, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import IpRoute from '../utilities/iproute';
@@ -28,6 +28,7 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false); // New state for remember me
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -38,6 +39,28 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
   const isFormValid = () => {
     return email !== '' && password !== '';
   };
+
+  useEffect(() => {
+    // Fetch saved credentials
+    const fetchSavedCredentials = async () => {
+      const rememberMeValue = await AsyncStorage.getItem('rememberMe');
+      if (rememberMeValue === 'true') {
+        const savedEmail = await AsyncStorage.getItem('rememberedEmail');
+        const savedPassword = await AsyncStorage.getItem('rememberedPassword');
+
+        if (savedEmail) {
+          setEmail(savedEmail);
+          
+          setRememberMe(true);
+        }
+        if(savedPassword){
+          setPassword(savedPassword);
+          setRememberMe(true);
+        }
+      }
+    };
+    fetchSavedCredentials();
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -56,22 +79,34 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
       if (employee) {
         console.log('Employee details found:', employee);
         await AsyncStorage.setItem('currentUser', JSON.stringify(employee));
-        const tempUser = await AsyncStorage.getItem('currentUser');
-        if(tempUser){
+        
+        // Save the "remember me" flag in AsyncStorage
+        if (rememberMe) {
+          await AsyncStorage.setItem('rememberMe', 'true');
+          // Optionally, you could also store the email for auto-fill purposes:
+          await AsyncStorage.setItem('rememberedEmail', email);
+          await AsyncStorage.setItem('rememberedPassword', password);
+        } else {
+          await AsyncStorage.removeItem('rememberMe');
+          await AsyncStorage.removeItem('rememberedEmail');
+          await AsyncStorage.removeItem('rememberedPassword');
+
+        }
+        
         navigation.reset({
-            index: 0,
-            routes: [{ name: 'BottomTabs' }], 
-        });}
+          index: 0,
+          routes: [{ name: 'BottomTabs' }], 
+        });
       } else {
         console.warn('No employee details found for the logged-in user.');
       }
+      // Reset navigation regardless (if needed)
       navigation.reset({
         index: 0,
         routes: [{ name: 'BottomTabs' }], 
-    });
+      });
     } catch (error: any) {
       console.error('Login Failed:', error.message);
-
       setErrorMessage(error.message);
     } finally {
       setLoading(false);
@@ -112,6 +147,16 @@ const LoginPage = ({ navigation }: { navigation: any }) => {
             />
             <TouchableOpacity style={styles.eyeIcon} onPress={togglePasswordVisibility}>
               <Image source={passwordVisible ? require('../assets/eye.png') : require('../assets/eye-closed.png')} style={styles.eyeImage} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Remember Me Checkbox */}
+          <View style={styles.rememberMeContainer}>
+            <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Text style={styles.checkboxTick}>✓</Text>}
+              </View>
+              <Text style={styles.rememberMeText}>Remember Me</Text>
             </TouchableOpacity>
           </View>
 
@@ -244,7 +289,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 14,
     color: 'white',
-    fontWeight: 'thin',
+    fontWeight: '300',
   },
   errorContainer: {
     marginTop: 20,
@@ -257,5 +302,35 @@ const styles = StyleSheet.create({
     color: '#721c24',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    marginHorizontal: 6,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    height: 17,
+    width: 17,
+    borderWidth: 1,
+    borderColor: '#602bf9',
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#602bf9',
+  },
+  checkboxTick: {
+    color: 'white',
+    fontSize: 14,
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: '#602bf9',
   },
 });
