@@ -229,7 +229,7 @@ const cancelDeletion = () => {
                 department={item.Department!}
                 role={item.Role}
                 onPress={() =>
-                  isSelectionMode ? toggleSelection(item) : {}
+                  isSelectionMode ? toggleSelection(item) : navigation.navigate('UserProfile', { userId: item.UserId })
                 }
                 onLongPress={() => {
                   setIsSelectionMode(true);

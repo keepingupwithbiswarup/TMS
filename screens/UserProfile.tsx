@@ -18,6 +18,7 @@ import IpRoute from '../utilities/iproute';
 import PieChartGifted from '../components/PieChartGifted';
 import { RadarChart } from '@salmonco/react-native-radar-chart';
 import AreaChartGifted from '../components/AreaChart';
+import {Dropdown} from 'react-native-element-dropdown';
 
 interface TotalProjects{
   ProjectName: string;
@@ -38,7 +39,12 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
   const [totalprojects, setTotalprojects] = useState<TotalProjects[]>(); 
 
   const [employeeTimesheetCount, setEmployeeTimesheetCount] = useState<EmployeeTimesheetArea[]>([]);
+  const [secondemployeeTimesheetCount, setsecondEmployeeTimesheetCount] = useState<EmployeeTimesheetArea[]>([]);
+
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(userId);
+  const [employeeList, setEmployeeList] = useState<User[]>([]);
   
+
 
   
 
@@ -117,10 +123,54 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
     }
 
   };
+  const fetchSecondEmployeeTimesheetCount = async (employeeId: number) => {
+    try {
+      const timesheetresponse = await fetch(`http://${IpRoute}/api/employeetimesheetcountbydate/${employeeId}`);
+      if (timesheetresponse.ok) {
+        const timesheet = await timesheetresponse.json();
+        setsecondEmployeeTimesheetCount(timesheet); 
+        console.log(timesheet); 
+      }else if(timesheetresponse.status === 404){
+        console.log('No timesheet found');
+
+      } else {
+        console.error(`Failed to fetch user working hours: ${timesheetresponse.status} - ${timesheetresponse.statusText}`);
+      }
+    } catch (err) {
+      console.error('Error fetching working hours:', err);
+    }
+
+  };
+
+  const fetchEmployeeList = async () => {
+    try {
+      const response = await fetch(`http://${IpRoute}/api/employees`);
+      if (response.ok) {
+        const employees = await response.json();
+        setEmployeeList(employees); 
+      } else {
+        console.error(`Failed to fetch employees: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const handleEmployeeChange = (employeeId: number) => {
+    setSelectedEmployeeId(employeeId);
+    
+    setsecondEmployeeTimesheetCount([]);
+    
+    fetchSecondEmployeeTimesheetCount(employeeId); 
+  };
+  
+  
+  
 
   useFocusEffect(
     useCallback(() => {
       checkUser();
+      fetchEmployeeList();
     }, [userId]) 
   );
 
@@ -142,6 +192,12 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       
     }
   }, [currentUser]);
+  // useEffect(() => {
+  //   if (currentUser?.EmployeeId) {
+  //     fetchSecondEmployeeTimesheetCount(6);
+      
+  //   }
+  // }, [currentUser]);
 
   if (loading) {
     return (
@@ -174,9 +230,10 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
   }
   
   const chartData = {
-    data1: employeeTimesheetCount.map(item => ({ value: item.TimesheetCount })),
-    data2: employeeTimesheetCount.map(item => ({ value: item.TimesheetCount })),
+    data1: employeeTimesheetCount,
+    data2: secondemployeeTimesheetCount,
   };
+  
   
 
   return (
@@ -305,8 +362,75 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
 )}
 
 
-{employeeTimesheetCount && employeeTimesheetCount.length > 0 ? 
- <AreaChartGifted data1={chartData.data1} data2={chartData.data2} /> : <Text>Sorry, we found no timesheet data for this employee</Text>}
+<View style={styles.container}>
+  {employeeTimesheetCount && employeeTimesheetCount.length > 0 ? (
+    <View style={[styles.card3, { paddingLeft: 10 }]}>
+      <Text style={{ fontSize: 19, padding: 10, paddingVertical: 5 ,color:"#333"}}>
+        Progress in the Last 7 Days
+      </Text>
+      <Text style={{ fontSize: 11, paddingHorizontal: 10, fontStyle: 'italic' }}>
+        See how hard your employee has been working in the last 7 days
+      </Text>
+
+      <View style={{ marginVertical: 20 }}>
+        <Text style={{ fontSize: 15, marginBottom: 5, paddingHorizontal: 11 }}>
+          Compare progress with another employee
+        </Text>
+        <Text style={{ fontSize: 12, marginBottom: 15, paddingHorizontal: 11,fontStyle:"italic" }}>
+         Select another employee below
+        </Text>
+        <Dropdown
+          data={employeeList.map((employee) => ({
+            label: employee.Username,
+            value: employee.EmployeeId,
+          }))}
+          labelField="label"
+          valueField="value"
+          placeholder="Select an Employee"
+          value={selectedEmployeeId}
+          onChange={(item) => handleEmployeeChange(item.value)}
+          style={styles.dropdown}
+          containerStyle={styles.dropdownContainer}
+        />
+      </View>
+
+      <AreaChartGifted data1={chartData.data1} data2={chartData.data2} />
+
+      <View style={{ marginTop: 0, paddingHorizontal: 20 }}>
+  <View style={{ flexDirection: 'row', marginTop: 0,marginBottom:10 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
+      <View style={{
+        width: 10, 
+        height: 10, 
+        borderRadius: 5, 
+        backgroundColor: '#8a56ce', 
+        marginRight: 5
+      }} />
+      <Text style={{ fontSize: 12 }}>
+        {employeeList.find((employee) => employee.UserId === userId)?.Username}
+      </Text>
+    </View>
+
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{
+        width: 10, 
+        height: 10, 
+        borderRadius: 5, 
+        backgroundColor: '#56acce', 
+        marginRight: 5
+      }} />
+      <Text style={{ fontSize: 12 }}>
+        {employeeList.find((employee) => employee.EmployeeId === selectedEmployeeId)?.Username}
+      </Text>
+    </View>
+  </View>
+</View>
+
+    </View>
+  ) : (
+    <Text style={{padding:20,fontStyle:"italic"}}>Sorry, we found no timesheet data for this employee</Text>
+  )}
+</View>
 
 
 
@@ -398,6 +522,19 @@ const styles = StyleSheet.create({
     color: "#888",
     fontStyle: "italic",
     marginTop: 4,
+  },
+  dropdownContainer: {
+    marginBottom: 20,
+    width: '80%',
+  },
+  dropdown: {
+    height: 35,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginLeft: 10,
+    width:"98%",
   },
 });
 

@@ -103,15 +103,19 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 
   const getTaskStatus = (subtasks: Subtask[]) => {
     let allFinished = true;
-    let someFinished = false;
+let someFinished = false;
 
-    for (let i = 0; i < subtasks.length; i++) {
-      if (subtasks[i].Status === 'Finished') {
-        someFinished = true;
-      } else {
-        allFinished = false;
-      }
-    }
+for (let i = 0; i < subtasks.length; i++) {
+  if (subtasks[i].Status === "Finished") {
+    someFinished = true; 
+  } else if (subtasks[i].Status === "Ongoing") {
+    someFinished = true; 
+    allFinished = false; 
+  } else {
+    allFinished = false; 
+  }
+}
+
 
     if (allFinished) {
       return 'Finished';
@@ -285,23 +289,27 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
 }
 
 const determineStatus = (subtasks: Subtask[]): string => {
-    if (subtasks.length === 0) return 'Due'; 
+  if (subtasks.length === 0) return 'Due'; 
 
-    let allFinished = true;
-    let someFinished = false;
+  let allFinished = true;
+  let someFinished = false;
 
-    subtasks.forEach((subtask) => {
-        if (subtask.Status === 'Finished') {
-            someFinished = true;
-        } else {
-            allFinished = false;
-        }
-    });
+  for (const subtask of subtasks) {
+      if (subtask.Status === 'Finished') {
+          someFinished = true;
+      } else {
+          allFinished = false; 
+          if (subtask.Status === 'Ongoing') {
+              someFinished = true;
+          }
+      }
+  }
 
-    if (allFinished) return 'Finished';
-    if (someFinished) return 'Ongoing';
-    return 'Due';
+  if (allFinished) return 'Finished';
+  if (someFinished) return 'Ongoing';
+  return 'Due';
 };
+
 
 async function updateProjectStatus(projectId: number, status: string) {
     try {
@@ -491,12 +499,17 @@ async function updateProjectStatus(projectId: number, status: string) {
           let someFinished = false;
   
           for (let i = 0; i < task.Subtasks.length; i++) {
-              if (task.Subtasks[i].Status === 'Finished') {
-                  someFinished = true;
-              } else {
-                  allFinished = false;
-              }
-          }
+            const subtaskStatus = task.Subtasks[i].Status;
+    
+            if (subtaskStatus === 'Finished') {
+                someFinished = true;
+            } else {
+                allFinished = false; 
+                if (subtaskStatus === 'Ongoing') {
+                    someFinished = true; 
+                }
+            }
+        }
   
           let newStatus = 'Due';
           if (allFinished) {
@@ -620,7 +633,7 @@ async function updateProjectStatus(projectId: number, status: string) {
                         source={
                           subtask.Status === 'Finished'
                             ? require('../assets/tick.png')
-                            : require('../assets/checkbox.png')
+                            : subtask.Status=== 'Due'? require('../assets/checkbox.png'): require('../assets/ongoing.png')
                         }
                         style={[
                           styles.statusIcon,

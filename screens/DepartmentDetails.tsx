@@ -64,6 +64,9 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
 
   const [currentWeek, setCurrentWeek] = useState(moment().startOf('isoWeek'));
 
+  
+  const [totalDeptWorkingHours, setTotalDeptWorkingHours] = useState<number>(0);
+
 
 
 
@@ -199,16 +202,21 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
           Date: dateStr,
           Weekday: weekday,
           TotalHours: duration,
-          Entries: [{ StartTime: StartTime.slice(11, 16), EndTime: EndTime.slice(11, 16), Duration: `${duration.toFixed(2)} hrs` }],
+          Entries: [{
+            StartTime: StartTime.slice(11, 16),
+            EndTime: EndTime.slice(11, 16),
+            Duration: `${duration.toFixed(2)} hrs`
+          }],
         });
       } else {
-        transformedData[EmployeeName].data.TotalHours += duration;
-        dateEntry.data.Entries.push({
+        dateEntry.TotalHours += duration;
+        dateEntry.Entries.push({
           StartTime: StartTime.slice(11, 16),
           EndTime: EndTime.slice(11, 16),
           Duration: `${duration.toFixed(2)} hrs`,
         });
       }
+      
     });
     console.log("Transformed data : ", JSON.stringify(transformedData));
     return transformedData;
@@ -338,7 +346,7 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
                           );
                           return workDay ? workDay.TotalHours : 0;
                         }),
-                        strokeWidth: 2,
+                        strokeWidth: 0.5,
                         color: (opacity = 1) =>
                           workingHoursData[emp].color || `rgba(74, 111, 233, ${opacity})`,
                       })),

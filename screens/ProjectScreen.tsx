@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as Progress from 'react-native-progress';
 import IpRoute from '../utilities/iproute';
+import { useFocusEffect } from '@react-navigation/native';
 
 const projectIcon = require('../assets/project-icon.png');
 const commentIcon = require('../assets/settings.png');
@@ -70,7 +71,7 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
     }
   };
 
-  useEffect(() => {
+ 
     const fetchProjects = async () => {
       setLoading(true);
       setError(null);
@@ -81,7 +82,7 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
 
         const projectsWithStatus = await Promise.all(
           filteredData.map(async (project: any) => {
-            const status = await getProjectStatus(project.ProjectId);
+            const status = project.Status;
             return {
               id: project.ProjectId.toString(),
               name: project.ProjectName,
@@ -101,8 +102,11 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
       }
     };
 
-    fetchProjects();
-  }, [department]);
+    useFocusEffect(
+      useCallback(() => {
+        fetchProjects();
+      }, [department])
+    );
 
   const filteredProjects = projects
     .filter((project) => {
@@ -132,6 +136,12 @@ const ProjectScreen: React.FC<DepartmentDetailsProps> = ({ navigation, departmen
       statusTextColor = '#C07F00';
     } else {
       statusText = 'In Progress';
+    }
+
+    if(loading){
+      return(
+        <View><ActivityIndicator size="large" color="#0000ff" /></View>
+      );
     }
 
     return (

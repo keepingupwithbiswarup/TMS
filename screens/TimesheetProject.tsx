@@ -7,8 +7,9 @@ import usePdfSource from '../utilities/usePdfSource';
 import CustomModal from '../components/CustomModal';
 import IpRoute from '../utilities/iproute';
 import { useFocusEffect } from '@react-navigation/native';
-import { set } from 'date-fns';
+import { set, sub } from 'date-fns';
 import { PieChart } from 'react-native-chart-kit';
+import OngoingCustomModal from '../components/OngoingCustomModal';
 
 
 
@@ -130,18 +131,22 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
         let allFinished = true;
         let someFinished = false;
     
-        subtasks.forEach((subtask) => {
+        for (const subtask of subtasks) {
             if (subtask.Status === 'Finished') {
                 someFinished = true;
             } else {
-                allFinished = false;
+                allFinished = false; // Any non-finished subtask means not all are finished
+                if (subtask.Status === 'Ongoing') {
+                    someFinished = true; // Mark ongoing as progress
+                }
             }
-        });
+        }
     
         if (allFinished) return 'Finished';
         if (someFinished) return 'Ongoing';
         return 'Due';
     };
+    
     
     async function updateProjectStatus(projectId: number, status: string) {
         try {
@@ -163,14 +168,18 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
     const getTaskStatus = (subtasks: Subtask[]) => {
         let allFinished = true;
         let someFinished = false;
-
+        
         for (let i = 0; i < subtasks.length; i++) {
-            if (subtasks[i].Status === 'Finished') {
-                someFinished = true;
-            } else {
-                allFinished = false;
-            }
+          if (subtasks[i].Status === "Finished") {
+            someFinished = true;
+          } else if (subtasks[i].Status === "Ongoing") {
+            someFinished = true; 
+            allFinished = false; 
+          } else {
+            allFinished = false; 
+          }
         }
+        
 
         if (allFinished) {
             return 'Finished';
@@ -327,6 +336,32 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 },
                 body: JSON.stringify({
                     status: 'Finished',
+                    approval: 'Approved',
+                    timesheetId: timesheetId,
+
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.text();
+                setApproveModalVisible(false);
+            } else {
+                const errorMessage = await response.text();
+                console.error('Failed to update subtask:', errorMessage);
+            }
+        } catch (error) {
+            console.error('Error calling the API:', error);
+        }
+    };
+    const ongoingSubtask = async (subTaskId: number) => {
+        try {
+            const response = await fetch(`http://${IpRoute}/api/approvesubtask/${subTaskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: 'Ongoing',
                     approval: 'Approved',
                     timesheetId: timesheetId,
 
@@ -547,13 +582,17 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                     let someFinished = false;
             
                     for (let i = 0; i < task.Subtasks.length; i++) {
-                        if (task.Subtasks[i].Status === 'Finished') {
+                        const subtaskStatus = task.Subtasks[i].Status;
+                
+                        if (subtaskStatus === 'Finished') {
                             someFinished = true;
                         } else {
-                            allFinished = false;
+                            allFinished = false; 
+                            if (subtaskStatus === 'Ongoing') {
+                                someFinished = true; 
+                            }
                         }
                     }
-            
                     let newStatus = 'Due';
                     if (allFinished) {
                         newStatus = 'Finished';
@@ -707,7 +746,7 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                                                     source={
                                                         subtask.Status === 'Finished'
                                                             ? require('../assets/tick.png')
-                                                            : require('../assets/checkbox.png')
+                                                            :  subtask.Status==='Due'? require('../assets/checkbox.png') : require('../assets/ongoing.png')
                                                     }
                                                     style={[
                                                         styles.statusIcon,
@@ -1102,10 +1141,11 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 title="Are you sure you want to delete this task permanently?"
                 subtitle="Deleting this would mean deletion of the associated subtasks."
             />
-            <CustomModal
+            <OngoingCustomModal
                 visible={approveModalVisible}
                 cancelModal={cancelApproveModal}
                 confirmDeletion={() => approveSubtask(subtaskId)}
+                confirmOngoing={() => ongoingSubtask(subtaskId)}
                 title="Do you want to approve this subtask?"
                 subtitle="Approving this would mean the subtask is completed."
             />
