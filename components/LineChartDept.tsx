@@ -3,7 +3,6 @@ import React from "react";
 import { View, Dimensions, Text, StyleSheet } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
 
-// Define types for the props
 interface ChartWithDonutProps {
   data: {
     DeptName: string;
@@ -11,13 +10,11 @@ interface ChartWithDonutProps {
   }[];
 }
 
-// Chart Component
 const ChartWithDonut: React.FC<ChartWithDonutProps> = ({ data }) => {
-  // Extract labels and values for the pie chart
   const chartData = data.map((dept, index) => ({
     value: dept.ProjectCount,
-    label: dept.DeptName.trim(),
-    color: colorPalette[index % colorPalette.length], // Ensures unique color assignment
+    label: dept.DeptName? dept.DeptName.trim() : 'Unassigned',
+    color: colorPalette[index % colorPalette.length], 
   }));
   
 
@@ -32,10 +29,10 @@ const ChartWithDonut: React.FC<ChartWithDonutProps> = ({ data }) => {
         data={chartData}
         // width={chartWidth}
         // height={250}
-        donut // Makes the pie chart into a donut
-        innerRadius={80} // Radius of the hole in the center of the donut
-        radius={120} // Outer radius of the donut
-        textColor="#fff" // Color of the text inside the pie chart
+        donut 
+        innerRadius={80}
+        radius={120} 
+        textColor="#fff" 
         centerLabelComponent={() => (
             <View>
                 <Text style={{ fontSize: 14, color: "black",textAlign:"center",marginBottom:5 }}>Total Projects</Text>
@@ -61,7 +58,6 @@ const ChartWithDonut: React.FC<ChartWithDonutProps> = ({ data }) => {
   );
 };
 
-// Function to generate random colors
 const colorPalette = [
     "#FF6B6B", // Soft Red
     "#FF9F43", // Orange
@@ -107,13 +103,13 @@ const styles = StyleSheet.create({
   },
   legendContainer: {
     marginTop: 20,
-    flexDirection: "column", // Stacked layout
-    alignItems: "flex-start", // Align items to the left
-    backgroundColor: "white", // Light background for contrast
+    flexDirection: "column", 
+    alignItems: "flex-start", 
+    backgroundColor: "white",
     padding: 10,
     borderRadius: 10,
    
-    width: "100%", // Full width
+    width: "100%",
   },
   legendItem: {
     flexDirection: "row",
@@ -121,7 +117,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "white", // White box for contrast
+    backgroundColor: "white", 
     marginBottom: 6,
     width: "100%",
   },

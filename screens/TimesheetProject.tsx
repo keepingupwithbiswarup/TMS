@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform, Pressable, RefreshControl } from 'react-native';
 import Header from '../components/Header';
 
 import { User } from '../utilities/types';
@@ -97,6 +97,9 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
     const [completedTaskCount, setCompletedTaskCount] = useState(0);
     const [totalHours, setTotalHours] = useState<number>(0);
 
+    const [refreshing, setRefreshing] = useState<boolean>(false);
+    
+
     async function getProjectStatus(projectId: number): Promise<string> {
         try {
             if (!projectId) {
@@ -124,6 +127,12 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
             return 'Due';
         }
     }
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchProjectData();
+        setRefreshing(false);
+      };
 
     const determineStatus = (subtasks: Subtask[]): string => {
         if (subtasks.length === 0) return 'Due'; 
@@ -362,7 +371,7 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 },
                 body: JSON.stringify({
                     status: 'Ongoing',
-                    approval: 'Unapproved',
+                    approval: 'Approved',
                     timesheetId: timesheetId,
 
                 }),
@@ -904,7 +913,9 @@ const TimesheetProject = ({ navigation, route }: { navigation: any, route: any }
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <ScrollView refreshControl={
+                      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4a6fe9']} />
+                    } contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.headerContainer}>
                     <View
                         style={[

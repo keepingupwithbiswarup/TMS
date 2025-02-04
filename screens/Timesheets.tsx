@@ -18,6 +18,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import TimeEntryModal from '../components/TimesheetEntryModal';
 import TimesheetUpdateModal from '../components/TimesheetUpdateModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomModal from '../components/CustomModal';
+import OngoingCustomModal from '../components/OngoingCustomModal';
+import TimesheetCustomModal from '../components/TimesheetCustomModal';
 
 type TimesheetEntry = {
     TimesheetEmpId: number;
@@ -44,9 +47,12 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
     const [error, setError] = useState<string | null>(null);
     const [isModalVisible, setModalVisible] = useState(false);
 
-
     const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
     const [timesheetId, setTimesheetId] = useState<number>(0);
+
+    // States for the approval modal and selected timesheet
+    const [isTimesheetCustomModalVisible, setTimesheetCustomModalVisible] = useState(false);
+    const [selectedTimesheetForApproval, setSelectedTimesheetForApproval] = useState<number | null>(null);
 
     const getEmployeeId = async (): Promise<number> => {
         const user = await AsyncStorage.getItem('currentUser');
@@ -67,7 +73,6 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
 
         fetchCurrentUserId();
     }, []);
-
 
     const fetchTimesheetData = async () => {
         setLoading(true);
@@ -112,17 +117,37 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
         },
         {}
     );
+
     const openTimesheetUpdateModal = (id: number) => {
         setTimesheetId(id);
         setIsUpdateModalVisible(true);
+    };
+
+    // Function to update timesheet status via PUT endpoint
+    const updateTimesheetStatus = async (timesheetId: number, status: string) => {
+        try {
+            const response = await fetch(`http://${IpRoute}/api/approvetimesheetsubtask`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ timesheetId, status }),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to update timesheet status');
+            }
+            // Refresh data after successful update
+            fetchTimesheetData();
+        } catch (error: any) {
+            console.error(error);
+            setError(error.message);
+        }
     };
 
     const sections = Object.keys(groupedData).map((projectName) => ({
         title: projectName,
         data: groupedData[projectName],
     }));
-
-
 
     const TimesheetCard: React.FC<{ item: TimesheetEntry; onDelete: () => void }> = ({
         item,
@@ -133,12 +158,8 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
         const start = moment(item.StartTime);
         const end = moment(item.EndTime);
         const duration = moment.duration(end.diff(start));
-
-
-
         const hours = duration.hours();
         const minutes = duration.minutes();
-
         const durationString = `${hours} hr ${minutes} mins`;
 
         return (
@@ -170,42 +191,80 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                 </View>
 
                 <View style={styles.cardContainer}>
-                    <TouchableOpacity onPress={() => navigation.navigate('TimesheetProject', { projectId:item.ProjectId,taskId:item.TaskId, subtaskId:item.SubTaskId,timesheetId:item.TimesheetId })}>
-                    <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={styles.textBold}>{item.ProjectName}</Text>
-                        <TouchableOpacity onPress={() => { openTimesheetUpdateModal(item.TimesheetId) }}><Image source={require('../assets/pencil-icon.png')} style={{ width: 20, height: 20, position: "relative", right: 0 }} /></TouchableOpacity> 
-                    </View>
-
-                    <Text style={{ fontSize: 14, paddingTop: 8 }}>Task | {item.TaskName}</Text>
-                    <Text style={{ fontSize: 14, paddingTop: 8 }}>Subtask | {item.SubTaskName}</Text>
-                    <View
-                        style={{
-                            borderLeftColor: '#6D9886',
-                            borderLeftWidth: 3,
-                            borderRadius: 3,
-                            padding: 5,
-                            marginVertical: 10,
-                            alignItems: 'center',
-                            flexDirection: 'row',
-                        }}
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate('TimesheetProject', {
+                                projectId: item.ProjectId,
+                                taskId: item.TaskId,
+                                subtaskId: item.SubTaskId,
+                                timesheetId: item.TimesheetId,
+                            })
+                        }
                     >
-                        <Image
-                            style={{ height: 25, width: 25, marginRight: 5 }}
-                            source={require('../assets/report.png')}
-                        />
-                        <View style={{ flex: 1 }}>
-                            <Text style={[styles.textRegular, { color: '#898B8A' }]}>
-                                {item.Username} commented,
-                            </Text>
-                            <Text style={{color: 'black', marginTop: 3, fontSize: 15,marginLeft:3 }}>
-                                {item.Description}
-                            </Text>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={[styles.textBold, { flex: 1 }]}>{String(item.ProjectName)}</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                {item.Status === 'Unapproved' ? (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setSelectedTimesheetForApproval(item.TimesheetId);
+                                            setTimesheetCustomModalVisible(true);
+                                        }}
+                                    >
+                                        <Image
+                                            source={require('../assets/unapproved.png')}
+                                            style={{ width: 20, height: 20, tintColor: 'red' }}
+                                        />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity  onPress={() => {
+                                        setSelectedTimesheetForApproval(item.TimesheetId);
+                                        setTimesheetCustomModalVisible(true);
+                                    }}>
+                                        <Image
+                                            source={require('../assets/approved.png')}
+                                            style={{ width: 20, height: 20, tintColor: 'green' }}
+                                        />
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity onPress={() => openTimesheetUpdateModal(item.TimesheetId)}>
+                                    <Image
+                                        source={require('../assets/pencil-icon.png')}
+                                        style={{ width: 20, height: 20 }}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
 
-                    <Text style={styles.hoursText}>
-                        {item.Username} worked for {durationString}
-                    </Text>
+                        <Text style={{ fontSize: 14, paddingTop: 8 }}>Task | {item.TaskName}</Text>
+                        <Text style={{ fontSize: 14, paddingTop: 8 }}>Subtask | {item.SubTaskName}</Text>
+                        <View
+                            style={{
+                                borderLeftColor: '#6D9886',
+                                borderLeftWidth: 3,
+                                borderRadius: 3,
+                                padding: 5,
+                                marginVertical: 10,
+                                alignItems: 'center',
+                                flexDirection: 'row',
+                            }}
+                        >
+                            <Image
+                                style={{ height: 25, width: 25, marginRight: 5 }}
+                                source={require('../assets/report.png')}
+                            />
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.textRegular, { color: '#898B8A' }]}>
+                                    {item.Username} commented,
+                                </Text>
+                                <Text style={{ color: 'black', marginTop: 3, fontSize: 15, marginLeft: 3 }}>
+                                    {item.Description}
+                                </Text>
+                            </View>
+                        </View>
+                        <Text style={styles.hoursText}>
+                            {item.Username} worked for {durationString}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -213,7 +272,6 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
     };
 
     const handleDelete = (timesheetId: number) => {
-        console.log(timesheetId);
         Alert.alert('Delete', 'Are you sure you want to delete this timesheet entry?', [
             { text: 'Cancel' },
             {
@@ -240,7 +298,6 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                         setLoading(false);
                     }
                 },
-
             },
         ]);
     };
@@ -249,7 +306,6 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
         <SafeAreaView style={styles.container}>
             <View style={styles.headerContainer2}>
                 <Text style={styles.headerText}>Timesheets</Text>
-
                 <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.plusButton}>
                     <Image source={require('../assets/add-icon.png')} style={styles.plusIcon} />
                 </TouchableOpacity>
@@ -309,13 +365,12 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                     renderItem={({ item }: { item: TimesheetEntry }) => (
                         <SwipeListView
                             data={[item]}
-                            renderItem={({ item: TimesheetEntry }) => <TimesheetCard item={item} onDelete={() => { handleDelete(item.TimesheetId) }} />}
+                            renderItem={({ item }) => (
+                                <TimesheetCard item={item} onDelete={() => handleDelete(item.TimesheetId)} />
+                            )}
                             renderHiddenItem={({ item }) => (
                                 <View style={styles.hiddenItem}>
-                                    <TouchableOpacity
-                                        style={{ padding: 12 }}
-                                        onPress={() => handleDelete(item.TimesheetId)}
-                                    >
+                                    <TouchableOpacity style={{ padding: 12 }} onPress={() => handleDelete(item.TimesheetId)}>
                                         <Image
                                             style={{ height: 30, width: 30, tintColor: 'red' }}
                                             source={require('../assets/delete-icon.png')}
@@ -329,13 +384,9 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                         />
                     )}
                     keyExtractor={(item: TimesheetEntry) => item.TimesheetId.toString()}
-                    ListEmptyComponent={
-                        <Text style={styles.noDataText}>No timesheet for selected date</Text>
-                    }
+                    ListEmptyComponent={<Text style={styles.noDataText}>No timesheet for selected date</Text>}
                 />
-
             )}
-
 
             <TimeEntryModal visible={isModalVisible} onClose={() => setModalVisible(false)} />
 
@@ -347,7 +398,25 @@ const Timesheets = ({ navigation }: { navigation: any }) => {
                 />
             )}
 
-
+            {/* Timesheet Approval Modal */}
+            <TimesheetCustomModal
+                visible={isTimesheetCustomModalVisible}
+                cancelModal={() => setTimesheetCustomModalVisible(false)}
+                title="Do you want to approve or disapprove this timesheet?"
+                subtitle="Approving would mean validating the work"
+                approve={() => {
+                    if (selectedTimesheetForApproval) {
+                        updateTimesheetStatus(selectedTimesheetForApproval, 'Approved');
+                        setTimesheetCustomModalVisible(false);
+                    }
+                }}
+                unapprove={() => {
+                    if (selectedTimesheetForApproval) {
+                        updateTimesheetStatus(selectedTimesheetForApproval, 'Unapproved');
+                        setTimesheetCustomModalVisible(false);
+                    }
+                }}
+            />
         </SafeAreaView>
     );
 };
@@ -368,14 +437,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 10,
     },
-    //   deleteButton: {
-    //     backgroundColor: 'red',
-    //     padding: 12,
-    //   },
-    //   deleteButtonText: {
-    //     color: 'white',
-    //     fontSize: 13,
-    //   },
     cardContainer: {
         backgroundColor: '#fff',
         marginTop: 5,

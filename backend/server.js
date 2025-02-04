@@ -1362,6 +1362,36 @@ ORDER BY Date DESC
         return res.status(500).send('Internal Server Error');
       }
     });
+
+
+    app.put('/api/approvetimesheetsubtask', async (req, res) => {
+      const { timesheetId, status } = req.body;
+    
+      if (!timesheetId || !status) {
+        return res.status(400).send('TimesheetId and status are required');
+      }
+    
+      try {
+        const result = await pool.request()
+          .input('TimesheetId', mssql.Int, timesheetId)
+          .input('Status', mssql.NVarChar, status)
+          .query(`
+            UPDATE Timesheet
+            SET Status = @Status
+            WHERE TimesheetId = @TimesheetId
+          `);
+    
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).send('Timesheet status updated successfully');
+        } else {
+          res.status(404).send('Timesheet not found');
+        }
+      } catch (err) {
+        console.error('Error updating timesheet status:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    
     
     
 

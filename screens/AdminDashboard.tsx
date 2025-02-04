@@ -111,7 +111,7 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
                         id: project.ProjectId.toString(),
                         name: project.ProjectName,
                         progress: 0,
-                        status: await getProjectStatus(project.ProjectId),
+                        status: project.Status,
                         comments: 0,
                         documents: 0,
                     };

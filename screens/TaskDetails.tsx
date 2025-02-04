@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, Button, Dimensions, Platform, Pressable, RefreshControl } from 'react-native';
 import Header from '../components/Header';
 
 import { User } from '../utilities/types';
@@ -90,6 +90,7 @@ const TaskDetails = ({ navigation, route }: { navigation: any, route: any }) => 
   const [ongoingTaskCount, setOngoingTaskCount] = useState(0);
   const [completedTaskCount, setCompletedTaskCount] = useState(0);
   const [totalHours, setTotalHours] = useState<number>(0);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
 
 
@@ -154,6 +155,12 @@ for (let i = 0; i < subtasks.length; i++) {
   };
   const cancelSubTaskModal = () => {
     setSubTaskModalVisible(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProjectData();
+    setRefreshing(false);
   };
 
 
@@ -790,7 +797,9 @@ async function updateProjectStatus(projectId: number, status: string) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4a6fe9']} />
+        } contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <View
             style={[
