@@ -1,6 +1,8 @@
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  PermissionsAndroid,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,35 +20,41 @@ import IpRoute from '../utilities/iproute';
 import PieChartGifted from '../components/PieChartGifted';
 import { RadarChart } from '@salmonco/react-native-radar-chart';
 import AreaChartGifted from '../components/AreaChart';
-import {Dropdown} from 'react-native-element-dropdown';
+import { Dropdown } from 'react-native-element-dropdown';
 
-interface TotalProjects{
+let RNFS = require('react-native-fs');
+import XLSX from 'xlsx'
+
+interface TotalProjects {
   ProjectName: string;
   Status: string;
 }
 
 
-interface EmployeeTimesheetArea{
-    Date: string;
-    TimesheetCount: number;
+interface EmployeeTimesheetArea {
+  Date: string;
+  TimesheetCount: number;
 }
 
 const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => {
   const { userId } = route.params;
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [workingHours, setWorkingHours] = useState<any>(null); 
-  const [totalprojects, setTotalprojects] = useState<TotalProjects[]>(); 
+  const [workingHours, setWorkingHours] = useState<any>(null);
+  const [totalprojects, setTotalprojects] = useState<TotalProjects[]>();
 
   const [employeeTimesheetCount, setEmployeeTimesheetCount] = useState<EmployeeTimesheetArea[]>([]);
   const [secondemployeeTimesheetCount, setsecondEmployeeTimesheetCount] = useState<EmployeeTimesheetArea[]>([]);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(userId);
   const [employeeList, setEmployeeList] = useState<User[]>([]);
-  
 
 
-  
+
+
+
+
+
 
   const checkUser = async () => {
     setLoading(true);
@@ -75,9 +83,9 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       const workinghrsresponse = await fetch(`http://${IpRoute}/api/employeeworkinghrs/${employeeId}`);
       if (workinghrsresponse.ok) {
         const workinghrs = await workinghrsresponse.json();
-        setWorkingHours(workinghrs); 
-        console.log(workinghrs); 
-      }else if(workinghrsresponse.status === 404){
+        setWorkingHours(workinghrs);
+        console.log(workinghrs);
+      } else if (workinghrsresponse.status === 404) {
         console.log('No working hours found for this user');
 
       } else {
@@ -92,9 +100,9 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       const totalprojects = await fetch(`http://${IpRoute}/api/employeetotalprojects/${employeeId}`);
       if (totalprojects.ok) {
         const TotalProjectsData = await totalprojects.json();
-        setTotalprojects(TotalProjectsData); 
-        console.log(TotalProjectsData); 
-      }else if(totalprojects.status === 404){
+        setTotalprojects(TotalProjectsData);
+        console.log(TotalProjectsData);
+      } else if (totalprojects.status === 404) {
         console.log('No working hours found for this user');
 
       } else {
@@ -110,9 +118,9 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       const timesheetresponse = await fetch(`http://${IpRoute}/api/employeetimesheetcountbydate/${employeeId}`);
       if (timesheetresponse.ok) {
         const timesheet = await timesheetresponse.json();
-        setEmployeeTimesheetCount(timesheet); 
-        console.log(timesheet); 
-      }else if(timesheetresponse.status === 404){
+        setEmployeeTimesheetCount(timesheet);
+        console.log(timesheet);
+      } else if (timesheetresponse.status === 404) {
         console.log('No timesheet found');
 
       } else {
@@ -128,9 +136,9 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       const timesheetresponse = await fetch(`http://${IpRoute}/api/employeetimesheetcountbydate/${employeeId}`);
       if (timesheetresponse.ok) {
         const timesheet = await timesheetresponse.json();
-        setsecondEmployeeTimesheetCount(timesheet); 
-        console.log(timesheet); 
-      }else if(timesheetresponse.status === 404){
+        setsecondEmployeeTimesheetCount(timesheet);
+        console.log(timesheet);
+      } else if (timesheetresponse.status === 404) {
         console.log('No timesheet found');
 
       } else {
@@ -147,7 +155,7 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
       const response = await fetch(`http://${IpRoute}/api/employees`);
       if (response.ok) {
         const employees = await response.json();
-        setEmployeeList(employees); 
+        setEmployeeList(employees);
       } else {
         console.error(`Failed to fetch employees: ${response.status}`);
       }
@@ -158,46 +166,150 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
 
   const handleEmployeeChange = (employeeId: number) => {
     setSelectedEmployeeId(employeeId);
-    
+
     setsecondEmployeeTimesheetCount([]);
-    
-    fetchSecondEmployeeTimesheetCount(employeeId); 
+
+    fetchSecondEmployeeTimesheetCount(employeeId);
   };
-  
-  
-  
+
+
+
 
   useFocusEffect(
     useCallback(() => {
       checkUser();
       fetchEmployeeList();
-    }, [userId]) 
+    }, [userId])
   );
 
   useEffect(() => {
     if (currentUser?.EmployeeId) {
       fetchWorkingHours(currentUser.EmployeeId);
-      
+
     }
-  }, [currentUser]); 
+  }, [currentUser]);
   useEffect(() => {
     if (currentUser?.EmployeeId) {
       fetchEmployeeProjects(currentUser.EmployeeId);
-      
+
     }
-  }, [currentUser]); 
+  }, [currentUser]);
   useEffect(() => {
     if (currentUser?.EmployeeId) {
       fetchEmployeeTimesheetCount(currentUser.EmployeeId);
-      
+
     }
   }, [currentUser]);
   // useEffect(() => {
   //   if (currentUser?.EmployeeId) {
   //     fetchSecondEmployeeTimesheetCount(6);
-      
+
   //   }
   // }, [currentUser]);
+
+
+
+
+
+  // Helper function to format date as YYYY-MM-DD_HH-MM-SS
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+  };
+  
+  const writeDataAndDownloadExcelFile = () => {
+    const employeeName = currentUser?.Username || "N_A";
+    const email = currentUser?.Email || "N/A";
+    const totalWorkingHours =
+      workingHours && workingHours.length > 0 ? workingHours[0].TotalWorkingHours : 0;
+    const totalProjects = totalprojects ? totalprojects.length : 0;
+    const projectsOngoing = totalprojects ? totalprojects.filter(project => project.Status === "Ongoing").length : 0;
+    const projectsDue = totalprojects ? totalprojects.filter(project => project.Status === "Due").length : 0;
+    const projectsFinished = totalprojects ? totalprojects.filter(project => project.Status === "Finished").length : 0;
+  
+    const dataToExport = [
+      {
+        "Employee Name": employeeName,
+        "Email": email,
+        "Total Working Hours": totalWorkingHours,
+        "Total Projects": totalProjects,
+        "Projects Ongoing": projectsOngoing,
+        "Projects Due": projectsDue,
+        "Projects Finished": projectsFinished,
+      }
+    ];
+  
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    XLSX.utils.book_append_sheet(wb, ws, "Employee Report");
+  
+    const wbout = XLSX.write(wb, { type: 'base64', bookType: "xlsx" });
+    const now = new Date();
+    const formattedDate = formatDate(now);
+    // Replace any spaces in employeeName with underscores for the filename
+    const sanitizedEmployeeName = employeeName.replace(/\s+/g, '_');
+    const fileName = `EmployeeReport_${sanitizedEmployeeName}_${formattedDate}.xlsx`;
+    const destPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+  
+    RNFS.writeFile(destPath, wbout, 'base64')
+      .then(() => {
+        console.log('FILE WRITTEN!');
+        return RNFS.scanFile(destPath);
+      })
+      .then(() => {
+        console.log('File scanned and now visible in Downloads');
+        Alert.alert('Success', 'Employee report downloaded successfully!');
+      })
+      .catch((err: any) => {
+        console.log('Error writing file:', err);
+        Alert.alert('Error', 'There was a problem downloading the report.');
+      });
+  };
+  
+
+
+  
+
+  const handleButtonClick = async () => {
+
+    try {
+      let isPermitedExternalStorage = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
+
+      if (!isPermitedExternalStorage) {
+
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: "Storage permission needed",
+            message: "This app needs access to your storage to download files.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK"
+          }
+        );
+
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          writeDataAndDownloadExcelFile();
+          console.log("Permission granted");
+        } else {
+          console.log("Permission denied");
+        }
+      } else {
+        writeDataAndDownloadExcelFile();
+      }
+    } catch (e) {
+      console.log('Error while checking permission');
+      console.log(e);
+      return
+    }
+  }
+
+
 
   if (loading) {
     return (
@@ -212,29 +324,31 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
   function formatTime(totalMinutes: number) {
     const hours = Math.trunc(totalMinutes / 60); // Get total hours (no decimals)
     const minutes = Math.trunc(totalMinutes % 60); // Get remaining minutes (no decimals)
-  
+
     let formattedTime = '';
-  
+
     if (hours > 0) {
       formattedTime += `${hours} hour${hours !== 1 ? 's' : ''}`;
     }
-  
+
     if (minutes > 0) {
       if (formattedTime !== '') {
         formattedTime += ' and ';
       }
       formattedTime += `${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
-  
+
     return formattedTime || '0 minutes';
   }
-  
+
   const chartData = {
     data1: employeeTimesheetCount,
     data2: secondemployeeTimesheetCount,
   };
-  
-  
+
+
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -296,141 +410,145 @@ const UserProfile = ({ route, navigation }: { route: any; navigation: any }) => 
           <Text style={{ paddingTop: 20, paddingLeft: 20, fontSize: 25, fontWeight: 'thin', color: '#333' }}>
             Track User Details
           </Text>
-          <Text style={{ paddingHorizontal: 22, fontSize: 13, fontWeight: 'thin', color: '#526D82', paddingTop: 3,paddingBottom:10 }}>
+          <Text style={{ paddingHorizontal: 22, fontSize: 13, fontWeight: 'thin', color: '#526D82', paddingTop: 3, paddingBottom: 10 }}>
             You can see all the details of the user below
           </Text>
         </View>
         {workingHours ?
-        <View style={[styles.card3,{paddingVertical:25}]}>
-          <Text style={{fontSize:19,fontWeight:"thin",paddingBottom:4}}>Total Working Hours</Text>
-          <Text style={{fontSize:12,fontWeight:"thin",paddingBottom:20,color: '#526D82',fontStyle:"italic"}}>Below you can see {currentUser?.Username}'s total working hours</Text>
-           <Text style={{fontSize:25}}>{formatTime(workingHours[0].TotalWorkingHours*60)}</Text>
-        </View>:<Text style={{padding:15,paddingLeft:23,fontStyle:"italic"}}>No working hours found for this user</Text>}
+          <View style={[styles.card3, { paddingVertical: 25 }]}>
+            <Text style={{ fontSize: 19, fontWeight: "thin", paddingBottom: 4 }}>Total Working Hours</Text>
+            <Text style={{ fontSize: 12, fontWeight: "thin", paddingBottom: 20, color: '#526D82', fontStyle: "italic" }}>Below you can see {currentUser?.Username}'s total working hours</Text>
+            <Text style={{ fontSize: 25 }}>{formatTime(workingHours[0].TotalWorkingHours * 60)}</Text>
+          </View> : <Text style={{ padding: 15, paddingLeft: 23, fontStyle: "italic" }}>No working hours found for this user</Text>}
         {totalprojects && totalprojects.length > 0 ? (
-  <View style={[styles.card3, { paddingVertical: 25 }]}>
-    <Text style={{ fontSize: 19, fontWeight: "thin", paddingBottom: 4 }}>
-      {currentUser?.Username}'s Projects Status
-    </Text>
-    <Text
-      style={{
-        fontSize: 12,
-        fontWeight: "thin",
-        paddingBottom: 20,
-        color: "#526D82",
-        fontStyle: "italic",
-      }}
-    >
-      Below you can see {currentUser?.Username}'s projects status overview
-    </Text>
-    <PieChartGifted projects={totalprojects}/>
+          <View style={[styles.card3, { paddingVertical: 25 }]}>
+            <Text style={{ fontSize: 19, fontWeight: "thin", paddingBottom: 4 }}>
+              {currentUser?.Username}'s Projects Status
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "thin",
+                paddingBottom: 20,
+                color: "#526D82",
+                fontStyle: "italic",
+              }}
+            >
+              Below you can see {currentUser?.Username}'s projects status overview
+            </Text>
+            <PieChartGifted projects={totalprojects} />
 
-    {totalprojects.map((project, index) => (
-    <View
-      key={index}
-      style={{
-        backgroundColor: "#fff",
-        padding: 6,
-        borderRadius: 10,
-        flexDirection: "row",
-        alignItems: "center",
-      }}
-    >
-      <Text style={{ fontSize: 22, color: "#333", marginRight: 10 }}>•</Text>
-      <View style={{ flex: 1 ,flexDirection:"row",justifyContent:"space-between"}}>
-        <Text style={{ fontSize: 15, color: "#333" }}>
-          {project.ProjectName}
-        </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            color: project.Status === "Due" ? "red" : "#888",
-            fontStyle: "italic",
-            marginTop: 2,
-            paddingRight:1,
-          }}
-        >
-          {project.Status}
-        </Text>
-      </View>
-    </View>
-  ))}
-  </View>
-) : (
-  <Text style={{ padding: 15, paddingLeft: 23, fontStyle: "italic" }}>
-    No projects found for this user
-  </Text>
-)}
+            {totalprojects.map((project, index) => (
+              <View
+                key={index}
+                style={{
+                  backgroundColor: "#fff",
+                  padding: 6,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontSize: 22, color: "#333", marginRight: 10 }}>•</Text>
+                <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 15, color: "#333" }}>
+                    {project.ProjectName}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: project.Status === "Due" ? "red" : "#888",
+                      fontStyle: "italic",
+                      marginTop: 2,
+                      paddingRight: 1,
+                    }}
+                  >
+                    {project.Status}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{ padding: 15, paddingLeft: 23, fontStyle: "italic" }}>
+            No projects found for this user
+          </Text>
+        )}
 
 
-<View style={styles.container}>
-  {employeeTimesheetCount && employeeTimesheetCount.length > 0 ? (
-    <View style={[styles.card3, { paddingLeft: 10 }]}>
-      <Text style={{ fontSize: 19, padding: 10, paddingVertical: 5 ,color:"#333"}}>
-        Progress in the Last 7 Days
-      </Text>
-      <Text style={{ fontSize: 11, paddingHorizontal: 10, fontStyle: 'italic' }}>
-        See how hard your employee has been working in the last 7 days
-      </Text>
+        <View style={styles.container}>
+          {employeeTimesheetCount && employeeTimesheetCount.length > 0 ? (
+            <View style={[styles.card3, { paddingLeft: 10 }]}>
+              <Text style={{ fontSize: 19, padding: 10, paddingVertical: 5, color: "#333" }}>
+                Progress in the Last 7 Days
+              </Text>
+              <Text style={{ fontSize: 11, paddingHorizontal: 10, fontStyle: 'italic' }}>
+                See how hard your employee has been working in the last 7 days
+              </Text>
 
-      <View style={{ marginVertical: 20 }}>
-        <Text style={{ fontSize: 15, marginBottom: 5, paddingHorizontal: 11 }}>
-          Compare progress with another employee
-        </Text>
-        <Text style={{ fontSize: 12, marginBottom: 15, paddingHorizontal: 11,fontStyle:"italic" }}>
-         Select another employee below
-        </Text>
-        <Dropdown
-          data={employeeList.map((employee) => ({
-            label: employee.Username,
-            value: employee.EmployeeId,
-          }))}
-          labelField="label"
-          valueField="value"
-          placeholder="Select an Employee"
-          value={selectedEmployeeId}
-          onChange={(item) => handleEmployeeChange(item.value)}
-          style={styles.dropdown}
-          containerStyle={styles.dropdownContainer}
-        />
-      </View>
+              <View style={{ marginVertical: 20 }}>
+                <Text style={{ fontSize: 15, marginBottom: 5, paddingHorizontal: 11 }}>
+                  Compare progress with another employee
+                </Text>
+                <Text style={{ fontSize: 12, marginBottom: 15, paddingHorizontal: 11, fontStyle: "italic" }}>
+                  Select another employee below
+                </Text>
+                <Dropdown
+                  data={employeeList.map((employee) => ({
+                    label: employee.Username,
+                    value: employee.EmployeeId,
+                  }))}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select an Employee"
+                  value={selectedEmployeeId}
+                  onChange={(item) => handleEmployeeChange(item.value)}
+                  style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                />
+              </View>
 
-      <AreaChartGifted data1={chartData.data1} data2={chartData.data2} />
+              <AreaChartGifted data1={chartData.data1} data2={chartData.data2} />
 
-      <View style={{ marginTop: 0, paddingHorizontal: 20 }}>
-  <View style={{ flexDirection: 'row', marginTop: 0,marginBottom:10 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
-      <View style={{
-        width: 10, 
-        height: 10, 
-        borderRadius: 5, 
-        backgroundColor: '#8a56ce', 
-        marginRight: 5
-      }} />
-      <Text style={{ fontSize: 12 }}>
-        {employeeList.find((employee) => employee.UserId === userId)?.Username}
-      </Text>
-    </View>
+              <View style={{ marginTop: 0, paddingHorizontal: 20 }}>
+                <View style={{ flexDirection: 'row', marginTop: 0, marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 20 }}>
+                    <View style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: '#8a56ce',
+                      marginRight: 5
+                    }} />
+                    <Text style={{ fontSize: 12 }}>
+                      {employeeList.find((employee) => employee.UserId === userId)?.Username}
+                    </Text>
+                  </View>
 
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{
-        width: 10, 
-        height: 10, 
-        borderRadius: 5, 
-        backgroundColor: '#56acce', 
-        marginRight: 5
-      }} />
-      <Text style={{ fontSize: 12 }}>
-        {employeeList.find((employee) => employee.EmployeeId === selectedEmployeeId)?.Username}
-      </Text>
-    </View>
-  </View>
-</View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: '#56acce',
+                      marginRight: 5
+                    }} />
+                    <Text style={{ fontSize: 12 }}>
+                      {employeeList.find((employee) => employee.EmployeeId === selectedEmployeeId)?.Username}
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
-    </View>
-  ) : (
-    <Text style={{padding:20,fontStyle:"italic"}}>Sorry, we found no timesheet data for this employee</Text>
-  )}
-</View>
+            </View>
+          ) : (
+            <Text style={{ padding: 20, fontStyle: "italic" }}>Sorry, we found no timesheet data for this employee</Text>
+          )}
+        </View>
+
+        <TouchableOpacity onPress={handleButtonClick} style={{ padding: 10,backgroundColor:"green",width:"30%" ,margin:20,borderRadius:5}}>
+          <Text style={{color:"white",fontWeight:"bold"}}>Download Report</Text>
+        </TouchableOpacity>
 
 
 
@@ -510,7 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginVertical: 10,
     elevation: 3,
-    padding:20,
+    padding: 20,
     marginHorizontal: 20,
   },
   projectName: {
@@ -534,7 +652,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     marginLeft: 10,
-    width:"98%",
+    width: "98%",
   },
 });
 

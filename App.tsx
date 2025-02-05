@@ -275,12 +275,12 @@ const AppNavigator = () => {
 
 const App = () => {
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      forbidAndroidShare(); 
-    }
-    if (Platform.OS === 'ios') {
-      enableSecureView();    
-    }
+    // if (Platform.OS === 'android') {
+    //   forbidAndroidShare(); 
+    // }
+    // if (Platform.OS === 'ios') {
+    //   enableSecureView();    
+    // }
   }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

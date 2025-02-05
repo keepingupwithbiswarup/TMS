@@ -37,6 +37,7 @@
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-element-dropdown": "^2.12.4",
     "react-native-elements": "^3.4.3",
+    "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.21.2",
     "react-native-gifted-charts": "^1.4.56",
     "react-native-linear-gradient": "^2.8.3",
@@ -49,7 +50,8 @@
     "react-native-safe-area-context": "^5.0.0",
     "react-native-screens": "^4.3.0",
     "react-native-svg": "^15.11.1",
-    "react-native-swipe-list-view": "^3.2.9"
+    "react-native-swipe-list-view": "^3.2.9",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
