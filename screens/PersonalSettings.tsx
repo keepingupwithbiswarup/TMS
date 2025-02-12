@@ -110,6 +110,11 @@ const PersonalSettings = ({ navigation }: { navigation: any }) => {
                 onPress={() => { navigation.navigate("AccountControl") }}
             />
             <OptionCard
+                iconSource={require('../assets/account-control.png')}
+                text="Feedbacks"
+                onPress={() => { navigation.navigate("FeedbacksReceived") }}
+            />
+            <OptionCard
                 iconSource={require('../assets/logout.png')}
                 text="Sign Out"
                 onPress={handleSignOut}

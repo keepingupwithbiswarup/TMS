@@ -37,6 +37,16 @@ const Menu = ({navigation}:{navigation:any}) => {
           imageSource={require('../assets/time-off.png')}
           onRightArrowPress={() => { }}
         />
+        <MenuCard
+          text="Announcements"
+          imageSource={require('../assets/announce.png')}
+          onRightArrowPress={() => {navigation.navigate("Announcements") }}
+        />
+        <MenuCard
+          text="Feedback"
+          imageSource={require('../assets/feedback.png')}
+          onRightArrowPress={() => {navigation.navigate("Feedback") }}
+        />
 
 
         <MenuCard

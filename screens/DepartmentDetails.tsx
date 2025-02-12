@@ -15,6 +15,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import Header from '../components/Header';
 import IpRoute from '../utilities/iproute';
 import moment from 'moment';
+import { User } from '../utilities/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Task = {
   time: string;
@@ -51,7 +53,9 @@ interface TransformedData {
 
 
 
-const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => {
+const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department, navigation }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
   const [departmentTasks, setDepartmentTasks] = useState<Tasks>({});
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
@@ -66,6 +70,24 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
 
   
   const [totalDeptWorkingHours, setTotalDeptWorkingHours] = useState<number>(0);
+
+  const checkUser = async () => {
+    const currentUser = await AsyncStorage.getItem('currentUser');
+    if (currentUser) {
+
+        setCurrentUser(JSON.parse(currentUser));
+        setLoading(false);
+    } else {
+        setLoading(false);
+    }
+};
+
+useEffect(() => {
+  const fetchUser = async () => {
+    await checkUser();
+  };
+  fetchUser();
+}, []);
 
 
 
@@ -478,7 +500,19 @@ const DepartmentDetails: React.FC<DepartmentDetailsProps> = ({ department }) => 
 
   return (
     <View>
-      <Header headingText={departmentObj?.DeptName!} />
+       <View style={styles.headerContainer}>
+                          <Text style={styles.headerText}>Dashboard</Text>
+                          <TouchableOpacity onPress={() => { navigation.navigate('PersonalSettings') }}>
+                            <View style={{flexDirection:"row",alignItems:"center"}}>
+                             <TouchableOpacity onPress={() => { navigation.navigate('DeptAnnouncements',{deptId:departmentObj?.DeptName}) }}>
+                              <Image source={require('../assets/notification-icon.png')} style={{width:30,height:30,marginRight:12}}></Image>
+                              </TouchableOpacity>
+                              <View style={styles.circle}>
+                                  <Text style={styles.circleText}>{currentUser?.Username[0]}</Text>
+                              </View>
+                              </View>
+                          </TouchableOpacity>
+                      </View>
       <FlatList
         data={['calendar', 'timeline', 'barChart', 'lineChart']}
         keyExtractor={(item) => item}
@@ -493,6 +527,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    backgroundColor: "white",
+    padding: 15,
+    elevation: 1,
+},
+headerText: {
+    position: "absolute",
+    top: 26,
+    right: 15,
+    textAlign: "center",
+    fontSize: 16,
+    width: "100%",
+    alignSelf: "center",
+    fontWeight: "bold",
+},
+loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+},
+
+circle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
+},
+circleText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+},
 
   chart: {
     marginVertical: 8,

@@ -24,6 +24,19 @@ const dbConfig = {
 
 };
 
+// const dbConfig = {
+//   user: 'sa',
+//   password: '12345',
+//   server: 'DESKTOP-54ML9PE',
+//   // port: 1433,
+//   database: 'TMSIntern',
+//   options: {
+//     encrypt: false,
+//     trustServerCertificate: true,
+//   },
+
+// };
+
 
 mssql.connect(dbConfig).then(pool => {
   if (pool.connected) {
@@ -389,6 +402,225 @@ mssql.connect(dbConfig).then(pool => {
       }
     });
 
+    app.get('/api/announcements', async (req, res) => {
+      try {
+        const result = await pool.request().query('select Announcements.*,Employees.Username from Announcements Join Employees on Employees.EmployeeId = Announcements.EmployeeId');
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.get('/api/getfeedbacks', async (req, res) => {
+      try {
+        const result = await pool.request().query(`SELECT 
+  Feedback.*, 
+  E1.Username AS Username, 
+  E2.Username AS Reviewer 
+FROM Feedback 
+JOIN Employees E1 ON E1.EmployeeId = Feedback.EmployeeId 
+JOIN Employees E2 ON E2.EmployeeId = Feedback.ReviewerId;
+`);
+        res.status(200).json(result.recordset);
+      } catch (err) {
+        console.error('Error executing query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.delete('/api/deleteannouncement/:id', async (req, res) => {
+      const { id } = req.params;
+    
+      try {
+        const result = await pool
+          .request()
+          .input('AnnouncementId', id)
+          .query('DELETE FROM Announcements WHERE AnnouncementId = @AnnouncementId');
+    
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).json({ message: 'Announcement deleted successfully' });
+        } else {
+          res.status(404).json({ message: 'Announcement not found' });
+        }
+      } catch (err) {
+        console.error('Error executing delete query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    app.delete('/api/deletefeedback/:id', async (req, res) => {
+      const { id } = req.params;
+    
+      try {
+        const result = await pool
+          .request()
+          .input('FeedbackId', id)
+          .query('DELETE FROM Feedback WHERE FeedbackId = @FeedbackId');
+    
+        if (result.rowsAffected[0] > 0) {
+          res.status(200).json({ message: 'Feedback deleted successfully' });
+        } else {
+          res.status(404).json({ message: 'Feedback not found' });
+        }
+      } catch (err) {
+        console.error('Error executing delete query:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    
+
+    app.post('/api/addannouncement', async (req, res) => {
+      try {
+        const { DeptName, EmployeeId, Announcement } = req.body;
+    
+        if (!DeptName || !EmployeeId || !Announcement) {
+          return res.status(400).json({ error: 'DeptName, EmployeeId, and Announcement are required.' });
+        }
+        await pool.request()
+          .input('DeptName', mssql.VarChar, DeptName)
+          .input('EmployeeId', mssql.Int, EmployeeId)
+          .input('Announcement', mssql.NVarChar, Announcement)
+          .query(`
+            INSERT INTO Announcements (DeptName, EmployeeId, Announcement, AnnouncementDate)
+            VALUES (@DeptName, @EmployeeId, @Announcement, GETDATE());
+          `);    
+        res.status(201).json({ message: 'Announcement inserted successfully.' });
+      } catch (err) {
+        console.error('Error inserting announcement:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.put('/api/updateannouncement', async (req, res) => {
+      try {
+        const { AnnouncementId, DeptName, EmployeeId, Announcement } = req.body;
+    
+        if (!AnnouncementId || !DeptName || !EmployeeId || !Announcement) {
+          return res.status(400).json({ error: 'AnnouncementId, DeptName, EmployeeId, and Announcement are required.' });
+        }
+    
+        await pool.request()
+          .input('AnnouncementId', mssql.Int, AnnouncementId)
+          .input('DeptName', mssql.VarChar, DeptName)
+          .input('EmployeeId', mssql.Int, EmployeeId)
+          .input('Announcement', mssql.NVarChar, Announcement)
+          .query(`
+            UPDATE Announcements
+            SET DeptName = @DeptName,
+                EmployeeId = @EmployeeId,
+                Announcement = @Announcement,
+                AnnouncementDate = GETDATE()
+            WHERE AnnouncementId = @AnnouncementId;
+          `);
+    
+        res.status(200).json({ message: 'Announcement updated successfully.' });
+      } catch (err) {
+        console.error('Error updating announcement:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.put('/api/updatefeedback', async (req, res) => {
+      try {
+        const { FeedbackId, EmployeeId, ReviewerId, FeedbackText, Rating } = req.body;
+    
+        if (!FeedbackId || !EmployeeId || !ReviewerId || !FeedbackText || !Rating) {
+          return res.status(400).json({ error: 'FeedbackId, EmployeeId, ReviewerId, FeedbackText, and Rating are required.' });
+        }
+    
+        await pool.request()
+          .input('FeedbackId', mssql.Int, FeedbackId)
+          .input('EmployeeId', mssql.Int, EmployeeId)
+          .input('ReviewerId', mssql.Int, ReviewerId)
+          .input('FeedbackText', mssql.NVarChar, FeedbackText)
+          .input('Rating', mssql.Int, Rating)
+          .query(`
+            UPDATE Feedback
+            SET EmployeeId = @EmployeeId,
+                ReviewerId = @ReviewerId,
+                FeedbackText = @FeedbackText,
+                Rating = @Rating,
+                ModifiedOn = GETDATE()
+            WHERE FeedbackId = @FeedbackId;
+          `);
+    
+        res.status(200).json({ message: 'Feedback updated successfully.' });
+      } catch (err) {
+        console.error('Error updating feedback:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+
+    app.put('/api/updateresponse', async (req, res) => {
+      try {
+        const { FeedbackId, Response } = req.body;
+    
+        if (!FeedbackId || Response === undefined) {
+          return res.status(400).json({ error: 'FeedbackId and Response are required.' });
+        }
+    
+        await pool.request()
+          .input('FeedbackId', mssql.Int, FeedbackId)
+          .input('Response', mssql.NVarChar, Response)
+          .query(`
+            UPDATE Feedback
+            SET Response = @Response,
+                ModifiedOn = GETDATE()
+            WHERE FeedbackId = @FeedbackId;
+          `);
+    
+        res.status(200).json({ message: 'Feedback response updated successfully.' });
+      } catch (err) {
+        console.error('Error updating feedback response:', err.message);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+    
+    
+
+    app.post('/api/addfeedback', async (req, res) => {
+      const { EmployeeId, ReviewerId, FeedbackText, Rating, ModifiedOn } = req.body;
+    
+      if (!EmployeeId || !ReviewerId || !FeedbackText || !Rating || Rating < 1 || Rating > 5) {
+        return res.status(400).json({
+          error: 'All fields are required: EmployeeId, ReviewerId, FeedbackText, Rating (1-5), and ModifiedOn.',
+        });
+      }
+    
+      const transaction = new mssql.Transaction();
+    
+      try {
+        await transaction.begin();
+    
+        const insertFeedbackQuery = `
+          INSERT INTO Feedback (EmployeeId, ReviewerId, FeedbackText, Rating, ModifiedOn, CreatedOn)
+          OUTPUT INSERTED.FeedbackId
+          VALUES (@EmployeeId, @ReviewerId, @FeedbackText, @Rating, @ModifiedOn, GETDATE())
+        `;
+    
+        const feedbackRequest = transaction.request();
+        feedbackRequest.input('EmployeeId', mssql.Int, EmployeeId);
+        feedbackRequest.input('ReviewerId', mssql.Int, ReviewerId);
+        feedbackRequest.input('FeedbackText', mssql.VarChar, FeedbackText);
+        feedbackRequest.input('Rating', mssql.Int, Rating);
+        feedbackRequest.input('ModifiedOn', mssql.DateTime, ModifiedOn);
+    
+        const feedbackResult = await feedbackRequest.query(insertFeedbackQuery);
+        const feedbackId = feedbackResult.recordset[0].FeedbackId;
+    
+        await transaction.commit();
+    
+        res.status(201).json({
+          message: 'Feedback submitted successfully.',
+          feedbackId,
+        });
+      } catch (err) {
+        console.error('Error executing transaction:', err.message);
+    
+        await transaction.rollback();
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+    
+    
 
     app.post('/api/createtask', async (req, res) => {
       const { taskName, projectId, dueDate, description } = req.body;

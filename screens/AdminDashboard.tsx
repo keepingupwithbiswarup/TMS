@@ -136,12 +136,15 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
         }
     };
 
+    
+
     useFocusEffect(
         useCallback(() => {
 
 
             fetchData();
         }, []));
+    
 
     useEffect(() => {
         if (projectsCount) {
@@ -153,7 +156,35 @@ const AdminDashboard = ({ navigation }: { navigation: any }) => {
         if (approvalTimesheets) {
             console.log("approval timesheets", approvalTimesheets);
         }
-    }, [approvalTimesheets])
+    }, [approvalTimesheets]);
+
+    useEffect(() => {
+        if (currentUser && currentUser.Role !== 'Admin') {
+            // Check if the currentUser has a valid department
+            if (!currentUser.Department || currentUser.Department.trim() === "") {
+                navigation.replace("HomePageV1");
+            } else {
+                fetch(`http://${IpRoute}/api/departments`)
+                    .then(response => response.json())
+                    .then((departments: any[]) => {
+                        const matchingDepartment = departments.find(
+                            dept => dept.DeptName === currentUser.Department
+                        );
+                        if (matchingDepartment) {
+                            navigation.replace("DepartmentBottomTabNavigator", { department: matchingDepartment.DeptId });
+                        } else {
+                            console.error("No matching department found for", currentUser.Department);
+                            navigation.replace("HomePageV1");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching departments:", error);
+                        navigation.replace("HomePageV1");
+                    });
+            }
+        }
+    }, [currentUser, navigation]);
+    
 
 
     const getProjectStatus = async (projectId: number): Promise<string> => {

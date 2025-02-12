@@ -58,6 +58,13 @@ import TimesheetViewPage from './screens/TimesheetViewPage';
 import AddTimesheet from './screens/AddTimesheet';
 import AllProjects from './screens/AllProjects';
 import TimesheetProject from './screens/TimesheetProject';
+import Announcements from './screens/Announcements';
+import AddAnnouncement from './screens/AddAnnouncement';
+import EditAnnouncement from './screens/EditAnnouncement';
+import Feedback from './screens/Feedback';
+import FeedbacksReceived from './screens/FeedbacksReceived';
+import FeedbackEdit from './screens/FeedbackEdit';
+import DeptAnnouncements from './screens/DeptAnnouncements';
 
 
 
@@ -266,6 +273,13 @@ const AppNavigator = () => {
       <Stack.Screen name="EditProject" component={EditProject} options={{ headerShown: false }} />
       <Stack.Screen name="AddTimesheet" component={AddTimesheet} options={{ headerShown: false }} />
       <Stack.Screen name="TimesheetProject" component={TimesheetProject} options={{ headerShown: false }} />
+      <Stack.Screen name="Announcements" component={Announcements} options={{ headerShown: false }} />
+      <Stack.Screen name="DeptAnnouncements" component={DeptAnnouncements} options={{ headerShown: false }} />
+      <Stack.Screen name="AddAnnouncement" component={AddAnnouncement} options={{ headerShown: false }} />
+      <Stack.Screen name="EditAnnouncement" component={EditAnnouncement} options={{ headerShown: false }} />
+      <Stack.Screen name="Feedback" component={Feedback} options={{ headerShown: false }} />
+      <Stack.Screen name="FeedbacksReceived" component={FeedbacksReceived} options={{ headerShown: false }} />
+      <Stack.Screen name="EditFeedback" component={FeedbackEdit} options={{ headerShown: false }} />
       {/* <Stack.Screen name="TimesheetViewPage" component={TimesheetViewPage} options={{ headerShown: false }} /> */}
     </Stack.Navigator>
   );
